@@ -44,6 +44,16 @@ weights/grounding-dino-tiny/
 
 `MIN_IMAGE_SIDE = 16`, `MAX_IMAGE_SIDE = 4096`, `MAX_PROMPTS = 16`, `MAX_PROMPT_CHARS = 48`, `MAX_TEXT_TOKENS = 256`; `BOX_THRESHOLD = 0.4`, `TEXT_THRESHOLD = 0.3`. One image per call. See `MODEL_CARD.md` for who owns tuning the thresholds and the measured CPU timings.
 
+## Tutorials
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/grounding-dino-detection-pipeline/blob/main/tutorials/grounding_dino_detection_colab.ipynb)
+
+`tutorials/grounding_dino_detection_colab.ipynb` is declared `TASK-INFERENCE` under DIMER Notebook Specification 1.0. Its default path draws a 320×240 scene in code (no download) with two prompts naming its shapes, surfaces the image/prompt ceilings, exposes the caller-owned `box_threshold`/`text_threshold` as form parameters, resolves the pinned model through the package's staging and verification path, detects through `GroundingDINOPipeline.detect`, reports `box_iou` against the drawn boxes as sanity evidence only (no mAP), and exports JSON, a detections CSV and an annotated PNG. BYOD is optional and gated off by default. See `tutorials/README.md` for the registry and `docs/release-verification.md` for the release gate.
+
+## Release status
+
+**Candidate.** Static/unit checks do not constitute clean-runtime notebook evidence. The clean-runtime run of the tutorial is pending; complete `docs/release-verification.md` against the exact release revision before calling the notebook release-grade.
+
 ## Documentation
 
 - `MODEL_CARD.md` — MODEL_CARD_SPEC 1.1 card, provenance digests, input/output contract, measured runtime.
