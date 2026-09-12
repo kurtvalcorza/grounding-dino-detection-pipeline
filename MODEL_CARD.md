@@ -20,7 +20,11 @@ base_model: IDEA-Research/grounding-dino-tiny
 
 ## Interactive Colab Tutorials
 
-This release ships no tutorial notebook (`tutorials/` is absent). The package is exercised through its test suite (`tests/`) and the run instructions in the README; a `NOTEBOOK_SPEC` 1.0 `TASK-INFERENCE` notebook is a follow-up, not a claim this card makes.
+This pipeline provides a ready-to-run interactive Google Colab notebook that exercises the repository's public API end to end — bootstrap a fresh runtime, stage and verify the pinned upstream revision, validate an input, run the task, and inspect and export the outputs:
+
+- **Task Inference Tutorial**:  
+  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/grounding-dino-detection-pipeline/blob/main/tutorials/grounding_dino_detection_colab.ipynb) [`grounding_dino_detection_colab.ipynb`](https://github.com/kurtvalcorza/grounding-dino-detection-pipeline/blob/main/tutorials/grounding_dino_detection_colab.ipynb)  
+  *Zero-shot text-prompted object detection with the pinned `IDEA-Research/grounding-dino-tiny` weights: score-ordered xyxy boxes with grounded phrases and uncalibrated sigmoid scores under caller-owned `box_threshold`/`text_threshold`; `box_iou` against drawn boxes as sanity evidence only, no mAP.*
 
 ---
 
