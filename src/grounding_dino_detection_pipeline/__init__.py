@@ -1,6 +1,7 @@
 from .pipeline import (
     BOX_THRESHOLD,
     DEFAULT_WEIGHTS_DIR,
+    INPUT_SCHEMA,
     MAX_IMAGE_SIDE,
     MAX_PROMPT_CHARS,
     MAX_PROMPTS,
@@ -13,14 +14,17 @@ from .pipeline import (
     TEXT_THRESHOLD,
     GroundingDINOPipeline,
     box_iou,
+    evaluation_report,
     format_prompts,
     stage_missing_files,
+    validate_inputs,
     verify_snapshot,
 )
 
 __all__ = [
     "BOX_THRESHOLD",
     "DEFAULT_WEIGHTS_DIR",
+    "INPUT_SCHEMA",
     "MAX_IMAGE_SIDE",
     "MAX_PROMPT_CHARS",
     "MAX_PROMPTS",
@@ -33,7 +37,9 @@ __all__ = [
     "TEXT_THRESHOLD",
     "GroundingDINOPipeline",
     "box_iou",
+    "evaluation_report",
     "format_prompts",
     "stage_missing_files",
+    "validate_inputs",
     "verify_snapshot",
 ]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -161,6 +161,143 @@ def _check_threshold(name: str, value: Any) -> float:
     return float(value)
 
 
+INPUT_SCHEMA: dict[str, Any] = {
+    "input": "one PIL.Image.Image (any mode, converted to RGB) plus 1..MAX_PROMPTS free-text phrases",
+    "image_side_px": [MIN_IMAGE_SIDE, MAX_IMAGE_SIDE],
+    "prompts": [1, MAX_PROMPTS],
+    "prompt_chars": [1, MAX_PROMPT_CHARS],
+    "prompt_tokens": [1, MAX_TEXT_TOKENS],
+    "box_threshold": [0.0, 1.0],
+    "text_threshold": [0.0, 1.0],
+    "preprocessing": (
+        "image converted to RGB; phrases stripped, lower-cased, period-terminated and space-joined "
+        "(format_prompts); the processor resizes to shortest edge 800 / longest edge 1333 and returned "
+        "boxes are mapped back to input pixels"
+    ),
+}
+
+
+def _check_inputs(
+    image: Any, prompts: Any, box_threshold: Any, text_threshold: Any
+) -> tuple[Image.Image, str, float, float]:
+    """Raise TypeError/ValueError naming the first violated ceiling; return the checked request.
+
+    ``detect`` and ``validate_inputs`` both route through this function so their acceptance
+    criteria cannot diverge.
+    """
+    rgb = validate_image(image)
+    text = format_prompts(prompts)
+    box_t = _check_threshold("box_threshold", box_threshold)
+    text_t = _check_threshold("text_threshold", text_threshold)
+    return rgb, text, box_t, text_t
+
+
+def validate_inputs(
+    image: Image.Image,
+    prompts: Sequence[str],
+    *,
+    box_threshold: float = BOX_THRESHOLD,
+    text_threshold: float = TEXT_THRESHOLD,
+    names: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Validation stage: return the input manifest (schema, observations, request, verdict).
+
+    Rejection is reported by raising exactly as ``detect`` would; a caller that wants the finding
+    recorded catches the exception and stores ``str(exc)`` under ``findings``.
+    """
+    _rgb, text, box_t, text_t = _check_inputs(image, prompts, box_threshold, text_threshold)
+    if names is not None and len(names) != 1:
+        raise ValueError("names must have exactly one entry (detect takes one image)")
+    return {
+        "schema": dict(INPUT_SCHEMA),
+        "inputs": [
+            {
+                "id": names[0] if names else "image-0",
+                "mode": image.mode,
+                "size": list(image.size),
+                "n_prompts": len(prompts),
+            }
+        ],
+        "prompt_text": text,
+        "box_threshold": box_t,
+        "text_threshold": text_t,
+        "verdict": "accepted",
+        "findings": [],
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+    }
+
+
+def evaluation_report(
+    result: Mapping[str, Any],
+    ground_truth_boxes: Mapping[str, Sequence[float]] | None = None,
+    *,
+    sample_kind: str = "synthetic",
+) -> dict[str, Any]:
+    """Evaluation stage: a machine-readable report even when nothing is measurable.
+
+    With ``ground_truth_boxes`` (phrase -> xyxy reference box) the report carries one ``box_iou``
+    entry per reference as sample-sanity geometry evidence; without them the verdict is
+    ``not-measurable`` and the report says what labelled data would make the task measurable.
+    """
+    detections = list(result["detections"])
+    base = {
+        "task": "zero-shot (open-vocabulary, text-prompted) object detection",
+        "decision_rule": (
+            "a box survives when its best grounding score reaches box_threshold and its phrase "
+            "tokens reach text_threshold; the score is an uncalibrated sigmoid, not a probability"
+        ),
+        "box_threshold": result.get("box_threshold", BOX_THRESHOLD),
+        "text_threshold": result.get("text_threshold", TEXT_THRESHOLD),
+        "sample_kind": sample_kind,
+        "n_detections": len(detections),
+        "baselines": [],
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+    }
+    if not ground_truth_boxes:
+        return {
+            **base,
+            "metrics": [],
+            "verdict": "not-measurable",
+            "reason": "no ground-truth boxes were supplied for the evaluated image",
+            "needs": (
+                "labelled boxes on your own images with a phrase vocabulary matching the prompts, "
+                "scored per object with box_iou and aggregated into precision/recall or mean average "
+                "precision at a stated IoU threshold; no such labelled set ships with this repository"
+            ),
+        }
+    metrics = []
+    for phrase, box in ground_truth_boxes.items():
+        ious = [box_iou(det["box"], box) for det in detections]
+        best = max(range(len(ious)), key=ious.__getitem__) if ious else None
+        metrics.append(
+            {
+                "id": "box_iou",
+                "reference": phrase,
+                "value": ious[best] if best is not None else 0.0,
+                "matched_label": detections[best]["label"] if best is not None else None,
+                "label_matches_reference": (detections[best]["label"] == phrase)
+                if best is not None
+                else False,
+                "estimation": "one reference box per phrase on a single scene, no dispersion estimate",
+            }
+        )
+    return {
+        **base,
+        "metrics": metrics,
+        "verdict": "sample-sanity",
+        "reason": (
+            f"{len(metrics)} reference box(es) on one tutorial sample; geometry sanity evidence, "
+            "not a detection benchmark"
+        ),
+        "needs": (
+            "a labelled box set from the deployment domain with a matching phrase vocabulary for any "
+            "mean-average-precision or precision/recall claim"
+        ),
+    }
+
+
 @dataclass
 class GroundingDINOPipeline:
     """Text-prompted (open-vocabulary) object detection over the pinned Grounding DINO tiny checkpoint."""
@@ -231,10 +368,7 @@ class GroundingDINOPipeline:
         text_threshold: float = TEXT_THRESHOLD,
     ) -> dict[str, Any]:
         """Detect the phrases in `prompts`; boxes are xyxy pixel coordinates in the input image."""
-        rgb = validate_image(image)
-        text = format_prompts(prompts)
-        box_t = _check_threshold("box_threshold", box_threshold)
-        text_t = _check_threshold("text_threshold", text_threshold)
+        rgb, text, box_t, text_t = _check_inputs(image, prompts, box_threshold, text_threshold)
         detections = self._runner(rgb, text, box_t, text_t)
         for det in detections:
             if set(det) != {"box", "label", "score"} or len(det["box"]) != 4:
