@@ -7,7 +7,7 @@ date_published: "2023-09-25"
 date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/IDEA-Research/grounding-dino-tiny)"
 ---
 
-# Grounding DINO tiny (DIMER package v0.1.0) — Zero-Shot Object Detection (Inference)
+# Grounding DINO tiny — Zero-Shot Object Detection (Inference)
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-IDEA--Research%2Fgrounding--dino--tiny-ffcc4d?style=flat)](https://huggingface.co/IDEA-Research/grounding-dino-tiny)
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-IDEA--Research%2FGroundingDINO-181717?style=flat&logo=github&logoColor=white)](https://github.com/IDEA-Research/GroundingDINO)
