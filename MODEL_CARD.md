@@ -2,6 +2,7 @@
 license: apache-2.0
 model_card_spec: "1.1"
 pipeline_tag: zero-shot-object-detection
+task: "Others - Open-Vocabulary Object Detection"
 base_model: IDEA-Research/grounding-dino-tiny
 date_published: "2023-09-25"
 date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/IDEA-Research/grounding-dino-tiny)"
