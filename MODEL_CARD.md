@@ -64,7 +64,7 @@ The upstream training data comes from detection datasets (Objects365), phrase-gr
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 6.18 s (689 MB checkpoint), a 320x240 synthetic scene with two prompts 4.37 s, a 4096x4096 noise image with one prompt 3.28 s — cost is dominated by the fixed 800/1333 working resolution and the 900 queries, not by the caller's pixel count. Data environment: the model assumes an ordinary photograph in which the prompted objects are visually distinct and nameable by a short English noun phrase; crowded scenes, heavy occlusion, tiny objects, and abstract or ambiguous phrases lower recall and raise spurious matches, and the pipeline reports no signal when they do.
+Operating environment: Python 3.12 with `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 6.18 s (689 MB checkpoint), a 320x240 synthetic scene with two prompts 4.37 s, a 4096x4096 noise image with one prompt 3.28 s — cost is dominated by the fixed 800/1333 working resolution and the 900 queries, not by the caller's pixel count. Data environment: the model assumes an ordinary photograph in which the prompted objects are visually distinct and nameable by a short English noun phrase; crowded scenes, heavy occlusion, tiny objects, and abstract or ambiguous phrases lower recall and raise spurious matches, and the pipeline reports no signal when they do.
 
 #### Metrics
 
@@ -133,7 +133,7 @@ Prohibited even where the model would work: covert surveillance or tracking of i
 
 ## Runtime
 
-- Pins: `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
+- Pins: `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
 - Precision: float32; preprocessing resize to shortest edge 800 / longest edge 1333, bilinear, ImageNet mean/std, padding (`GroundingDinoImageProcessor` from the snapshot); text through the snapshot BERT tokenizer.
 - Measured 2026-09-12 in the Windows venv (`torch 2.14.0+cu130`) with `CUDA_VISIBLE_DEVICES=""`, device `cpu`: `verify_snapshot` 0.46 s (9 files, 690 MB); load 6.18 s; `detect` on a synthetic 320x240 scene (grey background, dark rectangle at [40, 60, 140, 180], red disc at [200, 80, 280, 160]) with prompts `["rectangle", "red circle"]` → 2 detections in 4.37 s: `red circle` [199.4, 79.1, 281.7, 161.4] score 0.932, `rectangle` [39.6, 59.3, 141.4, 181.4] score 0.698; same call at thresholds 0.2/0.2 → identical 2 boxes in 4.51 s; 4096x4096 uniform-noise image with prompt `["rectangle"]` → 1 detection in 3.28 s. Process wall 21 s.
 - Tests: `pytest -q -o addopts= tests` — 11 passed, offline, no weights required; `ruff check src tests` clean.
