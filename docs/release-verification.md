@@ -114,7 +114,7 @@ they are measurements for the stated runtime, not general estimates.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
 |---|---|---|---|---|---|
-| | | | Default sample path | | pending — queued to the GPU lane |
+| 2026-09-14 | `9bf9e00` / `b1e416c68b76` | Kaggle CPU (`kurtvalcorza/dimer-nb2-grounding-dino-detection` v1) | Default sample path | 271.8 s | **PASSED** — 8/8 ok code cells executed cleanly, 20 files, 690 MB staged |
 
 ## Current status
 

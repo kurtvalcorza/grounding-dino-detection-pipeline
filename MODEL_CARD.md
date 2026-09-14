@@ -3,6 +3,8 @@ license: apache-2.0
 model_card_spec: "1.1"
 pipeline_tag: zero-shot-object-detection
 base_model: IDEA-Research/grounding-dino-tiny
+date_published: "2023-09-25"
+date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/IDEA-Research/grounding-dino-tiny)"
 ---
 
 # Grounding DINO tiny (DIMER package v0.1.0) — Zero-Shot Object Detection (Inference)
@@ -11,7 +13,6 @@ base_model: IDEA-Research/grounding-dino-tiny
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-IDEA--Research%2FGroundingDINO-181717?style=flat&logo=github&logoColor=white)](https://github.com/IDEA-Research/GroundingDINO)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-2303.05499-b31b1b.svg)](https://arxiv.org/abs/2303.05499)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Pipeline](https://img.shields.io/badge/Pipeline-grounding--dino--detection--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/grounding-dino-detection-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -28,7 +29,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 `IDEA-Research/grounding-dino-tiny` is the Transformers-format release of the Grounding DINO tiny model (Liu et al., arXiv:2303.05499), pinned here to revision `a2bb814dd30d776dcf7e30523b00659f4f141c71`. The snapshot `config.json` declares `GroundingDinoForObjectDetection`: a Swin-T image backbone (`depths` 2/2/6/2) and a BERT text encoder feed a DETR-style encoder–decoder (`d_model` 256, 6 encoder and 6 decoder layers, 8 heads, 4 deformable-attention points, 4 feature levels, `two_stage` query selection, `num_queries` 900) whose cross-modality fusion lets each query attend to the prompt tokens. At inference the model reads one image and one text string and emits, per query, a box and a per-token similarity; the processor keeps queries whose maximum token similarity clears a box threshold and labels each box with the tokens above a text threshold. Nothing is trained or adapted here. What this repository adds is packaging: `verify_snapshot` and `stage_missing_files` (manifest digest checking and fresh-clone staging), `GroundingDINOPipeline.from_pretrained` (verified local loading, `trust_remote_code=False`), `format_prompts` (the lowercase-and-period prompt grammar the upstream card requires), `detect` (input validation, threshold checks, sorted pixel-space output), and `box_iou`.
 
@@ -63,7 +64,7 @@ The upstream training data comes from detection datasets (Objects365), phrase-gr
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 6.18 s (689 MB checkpoint), a 320x240 synthetic scene with two prompts 4.37 s, a 4096x4096 noise image with one prompt 3.28 s — cost is dominated by the fixed 800/1333 working resolution and the 900 queries, not by the caller's pixel count. Data environment: the model assumes an ordinary photograph in which the prompted objects are visually distinct and nameable by a short English noun phrase; crowded scenes, heavy occlusion, tiny objects, and abstract or ambiguous phrases lower recall and raise spurious matches, and the pipeline reports no signal when they do.
+Operating environment: Python 3.12 with `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`, float32 on CPU; CUDA is used automatically when visible but was not exercised for this card. Measured on the reference machine with the GPU hidden (`CUDA_VISIBLE_DEVICES=""`): load 6.18 s (689 MB checkpoint), a 320x240 synthetic scene with two prompts 4.37 s, a 4096x4096 noise image with one prompt 3.28 s — cost is dominated by the fixed 800/1333 working resolution and the 900 queries, not by the caller's pixel count. Data environment: the model assumes an ordinary photograph in which the prompted objects are visually distinct and nameable by a short English noun phrase; crowded scenes, heavy occlusion, tiny objects, and abstract or ambiguous phrases lower recall and raise spurious matches, and the pipeline reports no signal when they do.
 
 #### Metrics
 
@@ -132,7 +133,7 @@ Prohibited even where the model would work: covert surveillance or tracking of i
 
 ## Runtime
 
-- Pins: `torch==2.14.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
+- Pins: `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, `pillow==11.3.0`; Python 3.12.
 - Precision: float32; preprocessing resize to shortest edge 800 / longest edge 1333, bilinear, ImageNet mean/std, padding (`GroundingDinoImageProcessor` from the snapshot); text through the snapshot BERT tokenizer.
 - Measured 2026-09-12 in the Windows venv (`torch 2.14.0+cu130`) with `CUDA_VISIBLE_DEVICES=""`, device `cpu`: `verify_snapshot` 0.46 s (9 files, 690 MB); load 6.18 s; `detect` on a synthetic 320x240 scene (grey background, dark rectangle at [40, 60, 140, 180], red disc at [200, 80, 280, 160]) with prompts `["rectangle", "red circle"]` → 2 detections in 4.37 s: `red circle` [199.4, 79.1, 281.7, 161.4] score 0.932, `rectangle` [39.6, 59.3, 141.4, 181.4] score 0.698; same call at thresholds 0.2/0.2 → identical 2 boxes in 4.51 s; 4096x4096 uniform-noise image with prompt `["rectangle"]` → 1 detection in 3.28 s. Process wall 21 s.
 - Tests: `pytest -q -o addopts= tests` — 11 passed, offline, no weights required; `ruff check src tests` clean.
