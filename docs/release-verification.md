@@ -170,3 +170,18 @@ and 0.608 (notebook pre-flight) mAP50, so a Kaggle number a few hundredths off e
 non-deterministic Hungarian training, not a finding — and the T4 run landed there (0.632 mAP50, 0.450 mAP75, recall
 0.951; `red blood cell` 0.809, `white blood cell` 0.744, `platelet` 0.343; epoch 6 kept; the six epochs took 931.6 s
 on the T4 against 619 s on the build GPU).
+
+
+## Supplemental open-vocabulary notebook remediation — 2026-09-26
+
+Applies only to `DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb`. No fresh hosted execution or real-model BYOD run was performed in this remediation. The primary notebook's previous execution record cannot establish qualification for this distinct frozen two-model comparison. **Candidate** status is retained.
+
+Confirmed gaps fixed: distribution version checks rejected valid local build suffixes; BYOD paths/IDs could alias or escape the intended directory; declared box caps were unenforced; BYOD results were only printed; surviving model aliases defeated sequential memory release. The optional path now validates bounded labelled inputs, checks both token contracts before model loading, performs the same frozen local inference, clears model references on success/failure/retry, and exports isolated JSON/CSV evidence with source/model/runtime digests. Labels are normalized identically to query phrases. The controlled activity explicitly requires a separate copy/fresh runtime and cannot rewrite the canonical comparison.
+
+Local baseline: 5 primary parity tests passed. The release validator already failed because its exact `STATUS.md` Current status regex does not accept the existing status line. This unrelated primary status contract is unchanged.
+
+Measured remediation checks: 17 focused tests pass using the actual notebook loader, evaluator, export and lifecycle functions with model doubles. They cover valid/repeated exports, malformed labels/boxes, traversal, inconsistent IDs/files, extra/unlabelled images, duplicate pixels/annotations, public-version comparison, token rejection before model load, sequential model release, and failure/retry with retained exception tracebacks. These tests demonstrate local control flow; they are not real detector or GPU memory measurements.
+
+Remaining evidence procedure: run the supplemental notebook from a fresh T4 runtime with defaults, record commit/blob, outputs, versions, wall/VRAM and restart count. For BYOD, supply a valid 8–200-image labelled local directory within the documented bounds, enable `USE_BYOD` and set `BYOD_DATASET_PATH`; execute through both local models and verify all four files in the new `byod/run-*` directory. Then repeat with an invalid box or inconsistent image mapping and retain the clear rejection before BYOD model loading. Keep each run's provenance separately. REL12 real-model BYOD and uninterrupted hosted qualification remain open; no release promotion follows from local tests.
+
+The shared Colab setup failure observed in the other four curriculum notebooks also applied here: replacing preloaded NumPy2.1.3 with2.5.3. This supplemental notebook now pins2.1.3 and has an actual setup-prefix regression for the preloaded-host scenario. No hosted execution of this revision is claimed.
