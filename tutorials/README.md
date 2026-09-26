@@ -57,3 +57,12 @@ The earlier record for the superseded `TASK-INFERENCE` carrier is kept in `../do
 ## AI Assistance Disclosure
 
 This repository’s code and accompanying documentation were developed with generative AI assistance for code development and technical writing under maintainer direction. The maintainer remains responsible for reviewing the implementation, validating results, and making release decisions. AI assistance does not constitute independent verification, provider endorsement, or release approval.
+
+
+## Supplemental open-vocabulary guided notebook
+
+`DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb` compares frozen Grounding DINO Tiny and OWLv2 on the same BCCD sample. Its profile is `TASK-INFERENCE`; the primary tutorial's adaptation and release evidence above does not qualify this supplemental notebook. It remains **Candidate**, pending a fresh supported-runtime run and valid/invalid real-model BYOD evidence.
+
+The optional local-directory BYOD path accepts `images/` plus `boxes.csv` (`image_id,filename,label,x0,y0,x1,y1`). It validates 8–200 distinct images, 1–16 normalized phrases, at most 300 boxes per image, side lengths 16–4096 and at most 100 million total decoded pixels. Every image must be annotated, IDs and files must map consistently, and duplicate pixels/annotations are rejected. Both model token limits are checked before loading either model. Frozen inference runs sequentially with cleanup on success and failure. Separate `outputs/open_vocabulary_detection/byod/run-*` directories contain input/model/runtime provenance, evaluation JSON, prediction JSON and detection CSV. No training or canonical result replacement occurs.
+
+The optional guided threshold activity uses a separate copy and fresh runtime because model references may have been released after the original run. Package version checks accept PEP 440 local build suffixes; stale imported packages request a session restart, which must be recorded rather than counted as uninterrupted execution.
