@@ -5,6 +5,7 @@ import hashlib
 import json
 import types
 import weakref
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
@@ -210,3 +211,39 @@ def test_notebook_cells_parse_and_outputs_not_fabricated():
     for cell in CELLS:
         if cell["cell_type"] == "code":
             compile("".join(cell["source"]), "cell", "exec")
+
+
+def bccd_xml(path, boxes):
+    objects = "".join(
+        f"<object><name>RBC</name><bndbox><xmin>{x0}</xmin><ymin>{y0}</ymin>"
+        f"<xmax>{x1}</xmax><ymax>{y1}</ymax></bndbox></object>"
+        for x0, y0, x1, y1 in boxes
+    )
+    path.write_text(
+        f"<annotation><size><width>32</width><height>32</height></size>{objects}</annotation>",
+        encoding="utf-8",
+    )
+
+
+def test_bccd_parse_drops_zero_area_points_and_rejects_other_bad_boxes(tmp_path):
+    ns = helpers(tmp_path)
+    ns.update(ET=ET, CLASS_PHRASES={"RBC": "red blood cell"}, zero_area_dropped=[])
+    image = tmp_path / "BloodImage_00338.jpg"
+    Image.new("RGB", (32, 32)).save(image)
+    xml = tmp_path / "BloodImage_00338.xml"
+    bccd_xml(xml, [(1, 1, 9, 9), (5, 5, 5, 5)])
+    record = ns["parse_record"](image, xml)
+    assert record["boxes"] == [[1.0, 1.0, 9.0, 9.0]]
+    assert ns["zero_area_dropped"] == [("BloodImage_00338", "RBC", [5.0, 5.0, 5.0, 5.0])]
+    for bad in [(9, 1, 1, 9), (1, 5, 9, 5), (0, 0, 40, 9)]:
+        bccd_xml(xml, [bad])
+        with pytest.raises(ValueError, match="invalid box"):
+            ns["parse_record"](image, xml)
+
+
+def test_bccd_pinned_counts_account_for_the_zero_area_points():
+    constants = "".join(CELLS[11]["source"])
+    loader = "".join(CELLS[13]["source"])
+    assert 'BCCD_ZERO_AREA_BOXES = ["BloodImage_00338", "BloodImage_00343"]' in constants
+    assert "BCCD_EXPECTED_BOXES = 4_886" in constants
+    assert "!= BCCD_ZERO_AREA_BOXES" in loader
