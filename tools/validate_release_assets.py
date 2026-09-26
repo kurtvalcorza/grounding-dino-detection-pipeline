@@ -414,7 +414,7 @@ def validate_weight_facts(root: Path = ROOT) -> None:
 def validate_release_status() -> None:
     """STATUS.md, README.md and tutorials/README.md must agree on the primary notebook status."""
     status = _read(ROOT / "STATUS.md")
-    match = re.search(r"Current status: \\*\\*(Candidate|Release-grade)\\b", status)
+    match = re.search(r"Current status: \*\*(Candidate|Release-grade)\b", status)
     _check(match is not None, "STATUS.md must declare 'Current status: **Candidate**' or '**Release-grade**'")
     token = match.group(1)
     readme = _read(ROOT / "README.md")
