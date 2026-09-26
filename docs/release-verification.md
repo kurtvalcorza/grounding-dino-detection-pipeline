@@ -185,3 +185,16 @@ Measured remediation checks: 17 focused tests pass using the actual notebook loa
 Remaining evidence procedure: run the supplemental notebook from a fresh T4 runtime with defaults, record commit/blob, outputs, versions, wall/VRAM and restart count. For BYOD, supply a valid 8–200-image labelled local directory within the documented bounds, enable `USE_BYOD` and set `BYOD_DATASET_PATH`; execute through both local models and verify all four files in the new `byod/run-*` directory. Then repeat with an invalid box or inconsistent image mapping and retain the clear rejection before BYOD model loading. Keep each run's provenance separately. REL12 real-model BYOD and uninterrupted hosted qualification remain open; no release promotion follows from local tests.
 
 The shared Colab setup failure observed in the other four curriculum notebooks also applied here: replacing preloaded NumPy2.1.3 with2.5.3. This supplemental notebook now pins2.1.3 and has an actual setup-prefix regression for the preloaded-host scenario. No hosted execution of this revision is claimed.
+
+
+### Maintainer-supplied successful Colab run — 2026-09-26
+
+The maintainer supplied the [executed notebook](execution-evidence/2026-09-26/DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb) and authorized merging PR #8 (merge commit `94d6579`). The file is archived byte-for-byte, SHA-256 `5434bf1737dd6fe7d4e73d93329ec617b45d044510fea25118ff01a3f5ddc1d7`. All 23 code cells have execution counts, 42 saved outputs and zero saved errors. Code-cell sources match commit `8a518154b075a3ca8dfdac8a774993b6fdcd53ed`, tutorial blob `44ddb2707e43415bb8899c0d2511f01314f6f629`, apart from Colab-inserted `# @title` lines. Later commits on `main` that touch the notebook (`a70b55f` (AI Use Disclosure)) change only markdown cells; its code cells are identical to the executed revision. This evidence commit does not change tutorial code.
+
+Scope: Default path: pinned BCCD commit `d272fb14`, 364 images and 4,886 boxes after the two zero-area annotations are dropped (pinned sample digest `af9390b9…` reproduced), 94 test images with 1,295 objects and a three-phrase vocabulary; Grounding DINO Tiny against the OWLv2 Base/16 ensemble. BYOD was not exercised.
+
+Saved runtime: Python 3.13.15, torch 2.14.0+cu130, Transformers 4.57.6, huggingface_hub 0.36.2, NumPy 2.1.3, CUDA Tesla T4. Execution reaches the final completion summary. The separate exported files were not supplied, so their bytes/digests were not independently inspected. Saved counts run sequentially from 1 to 23; runtime freshness and absence of manual restarts/reruns are not independently established by the artifact.
+
+Results (sample-sanity measures on the built-in data, not general model rankings): Grounding DINO Tiny / OWLv2: mAP50 0.1088 / 0.0537, mAP75 0.0523 / 0.0331, mAP50-95 0.0603 / 0.0294, recall50 0.2927 / 0.0680, 5,173 / 1,506 predictions, mean inference 0.475 / 0.783 s per image. The low scores are the expected domain shift of web-trained detectors on blood-smear images.
+
+Status remains **Candidate**. Merge approval and this successful default-path run do not close the optional-path (FULL/BYOD) or REL12 qualification gates, and `metadata.dimer.clean_runtime_evidence` in the notebook stays `pending` as authored (editing it would change the verified blob).
