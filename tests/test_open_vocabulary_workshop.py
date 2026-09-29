@@ -482,9 +482,9 @@ def test_visual_handoff_and_export_contracts_in_source():
 
 
 def test_title_strip_does_not_cover_boxes_at_the_top_edge():
-    from PIL import ImageDraw
+    from PIL import ImageColor, ImageDraw
 
-    ns = {"Image": Image, "ImageDraw": ImageDraw, "PHRASE_COLORS": {"platelet": "gold"}}
+    ns = {"Image": Image, "ImageDraw": ImageDraw, "ImageColor": ImageColor, "PHRASE_COLORS": {"platelet": "gold"}}
     functions_from(ns, "5750ceab", {"title_bar", "draw_boxes"})
     image = Image.new("RGB", (200, 100), "black")
     out = ns["draw_boxes"](image, [(0.9, "platelet", [0, 0, 200, 100])], "title")
@@ -494,8 +494,9 @@ def test_title_strip_does_not_cover_boxes_at_the_top_edge():
     assert (strip[:, 100:] == 255).all()  # the strip holds only the title text on the left
     gold = np.all(top == np.array([255, 215, 0]), axis=-1)
     assert gold[0].all()  # the box's top edge is visible
-    label = top[2:12, 2:60].astype(int)  # anti-aliased text: look for yellowish ink, not exact gold
-    assert ((label[..., 0] > 100) & (label[..., 1] > 80) & (label[..., 2] < 80)).sum() > 10
+    label = top[2:12, 2:40]
+    assert gold[2:12, 2:40].mean() > 0.5  # filled gold backing behind the label
+    assert (label.sum(axis=-1) < 150).sum() > 10  # dark text on the light backing
 
 
 def test_show_image_falls_back_without_ipython(capsys, monkeypatch):
