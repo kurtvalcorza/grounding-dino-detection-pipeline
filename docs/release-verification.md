@@ -198,3 +198,75 @@ Saved runtime: Python 3.13.15, torch 2.14.0+cu130, Transformers 4.57.6, huggingf
 Results (sample-sanity measures on the built-in data, not general model rankings): Grounding DINO Tiny / OWLv2: mAP50 0.1088 / 0.0537, mAP75 0.0523 / 0.0331, mAP50-95 0.0603 / 0.0294, recall50 0.2927 / 0.0680, 5,173 / 1,506 predictions, mean inference 0.475 / 0.783 s per image. The low scores are the expected domain shift of web-trained detectors on blood-smear images.
 
 Status remains **Candidate**. Merge approval and this successful default-path run do not close the optional-path (FULL/BYOD) or REL12 qualification gates, and `metadata.dimer.clean_runtime_evidence` in the notebook stays `pending` as authored (editing it would change the verified blob).
+
+
+## Supplemental open-vocabulary notebook review fixes — 2026-09-30
+
+Applies only to `DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb` and answers the 2026-09-30 notebook review of commit `a70b55f` (blob `db5026ed`; unchanged on `main` at `e5d53e0`). The notebook has no generator; every edit was applied as an anchor-checked replacement keyed by cell id, so cell ids, order, metadata and the declared specification (2.1) are unchanged. **Candidate** status is retained.
+
+| Finding | Change |
+|---|---|
+| M1 invalid numerical outputs | Both adapters validate raw output before thresholding: shapes, finite Grounding DINO logits at the active phrase-token positions (masked `-inf` padding is allowed), finite OWLv2 logits for the supplied queries, and finite boxes. Normalized predictions are validated again by the evaluator and before every export: finite score in [0, 1], four finite ordered coordinates inside the image, vocabulary phrase. OWLv2 boxes are clipped to the image, matching the Grounding DINO adapter. JSON is written with `allow_nan=False`; BYOD scores before creating its run directory. |
+| M2 crowded-object diagnostics | New `assign_detections` / `assignment_summary` use the AP evaluator's greedy rule, so each prediction and each object is counted once (true positive, duplicate, wrong phrase, spurious; matched or missed). Sections 15, 16 and 19 use it; overlap coverage is reported separately and named as such. Section 15 asserts that unique matches equal the AP evaluator's recall50 matches. |
+| M3 visual handoff | Reference-box previews (Section 10) before inference; the first two comparison panels and an evaluator view (matched / duplicate / missed) shown inline in Section 22; a two-image BYOD preview; captions give the saved file path. A kernel without IPython prints the path instead. |
+| 4.1, 4.2 | BYOD rejects duplicate CSV headers, rows with the wrong number of fields and multi-frame images. |
+| 4.3 | Prompt order reports both ordered-list identity and set identity. |
+| 4.4 | Prompt summaries add `gt_support`; an absent class shows `n/a`, not `0.0`. Glossary adds AP (with a worked example), true positive/duplicate, confidence floor vs IoU threshold, and NMS. |
+| 4.5 | Per-session `RUN_ID`, `output_inventory.json` with the size and SHA-256 of this run's files, verified by the terminal summary; a stale `threshold_sweep.csv` is removed when the sweep is off. |
+
+User-visible contract changes: `metrics.json` `duplicates` now holds the assignment summary (keys `true_positives`, `duplicate_predictions`, …) instead of `primary_matches` / `redundant_same_object_boxes`; `object_analysis.csv` `*_detected` / `*_score` / `*_iou` describe the one-to-one match and gain `*_best_overlap_iou`; `prompt_sensitivity.csv` gains `gt_support`; `threshold_sweep.csv` columns follow the assignment; a new `output_inventory.json`; OWLv2 boxes are clipped to the image. The workshop specification document was updated to match.
+
+Checked and not changed: OWLv2's padded-square box mapping. transformers 4.57.6 `_scale_boxes` already rescales by `max(height, width)`, so the notebook's `target_sizes=[image.size[::-1]]` was correct.
+
+Local checks (Windows, Python 3.12.14, torch 2.13.0+cpu, transformers 4.57.6): `ruff check src tests tools` clean; `pytest` 99 passed / 2 skipped (baseline `e5d53e0`: 74 passed / 2 skipped); the 24 new workshop tests all fail against the unfixed notebook; `validate_release_assets.py` PASS; `build_notebook.py --check` OK. The Grounding DINO and OWLv2 adapter tests use substitute models; the OWLv2 test calls the real upstream `Owlv2ImageProcessor.post_process_object_detection`.
+
+CPU real-model execution (not hosted, not clean-runtime evidence): the notebook's own cells ran in order in one interpreter with the real pinned Grounding DINO and OWLv2 snapshots and the pinned BCCD archive, all digest-verified by the notebook (sample digest `af9390b9…` reproduced; 94 test images, 1,295 objects). Deviations from the supported runtime: CPU instead of T4; local torch 2.13 (the setup cell's pip-install prefix was skipped); torchvision absent (only its version string is read); `IPython.display` captured to files. The fixed revision was run with the threshold sweep on; the unfixed revision (`e5d53e0`) with defaults. The fixed run used an intermediate revision that differs from the committed notebook only in comments, markdown, one `json.dumps(..., allow_nan=False)` keyword and passing `(side, side)` rather than `(height, width)` as the OWLv2 target size, which upstream reduces to the same `max` side.
+
+| Same host, CPU | Unfixed `e5d53e0` | Fixed |
+|---|---|---|
+| Grounding DINO mAP50 / mAP75 / mAP50-95 / recall50 / predictions | 0.1089 / 0.0523 / 0.0607 / 0.2927 / 5,172 | identical |
+| OWLv2 mAP50 / mAP75 / recall50 / predictions | 0.0537 / 0.0331 / 0.0680 / 1,506 | identical |
+| OWLv2 mAP50-95 | 0.02941 | 0.02949 (image clipping) |
+| Grounding DINO duplicates diagnostic | 387 primary matches, 336 redundant boxes | 379 true positives (= AP recall50 matches), 916 missed, 325 duplicate, 1,055 wrong phrase, 3,413 spurious; 387 objects with overlap coverage |
+| OWLv2 duplicates diagnostic | 88 primary, 0 redundant | 88 true positives, 1,207 missed, 0 duplicate, 797 wrong phrase, 621 spurious |
+| Object categories (both / GDINO-only / OWLv2-only / both miss / loc. disagreement) | 77 / 304 / 5 / 903 / 6 | 79 / 296 / 5 / 911 / 4 |
+| Validation errors on real outputs | — | none (all 23 code cells ok) |
+
+These CPU numbers agree with the recorded 2026-09-26 T4 run to within GPU/CPU numerical noise (T4: Grounding DINO 0.1088 / 0.0523 / 0.0603 / 0.2927 / 5,173; OWLv2 0.0537 / 0.0331 / 0.0294 / 0.0680 / 1,506). All 5 inline displays rendered (2 reference previews, 2 comparison panels, 1 evaluator view); the 15-file inventory was verified by the terminal cell. BYOD was not exercised with real models.
+
+Follow-up in the same PR: panel titles now sit in a 22-px strip above the image instead of being painted over its top 22 rows, so boxes and labels at the top edge stay visible (panels are 22 px taller), and each box label has a filled backing in its phrase colour with black or white text chosen for contrast. The CPU run above predates these display-only changes.
+
+Remaining before promotion: a fresh hosted T4 `Run all` of the committed blob (defaults, then a separate copy with `RUN_THRESHOLD_SWEEP=True`), and real-model labelled BYOD positive and invalid-input runs (REL12). Learner walkthrough remains unperformed.
+
+### Maintainer-supplied Colab execution of revision `563b0f6` — 2026-09-30
+
+- **File:** [executed notebook](execution-evidence/2026-09-30/DIMER_Open_Vocabulary_Object_Detection_Workshop_563b0f6.ipynb), archived byte-for-byte, SHA-256 `b22a233f56e11cb5620f76379a408db950d2475c7f33b7a0227b3b2c1d421636`.
+- **Source match:** all 56 cells have the same ids and order as PR-head commit `563b0f6` (notebook blob `07b6a321`). Code-cell sources are identical; no `# @param` value was changed, so this is the default path (`USE_BYOD=False`, `RUN_PROMPT_EXPERIMENT=True`, `RUN_THRESHOLD_SWEEP=False`).
+- **Runtime:** Colab Tesla T4, Python 3.13.15. The setup cell installed torch 2.14.0 / torchvision 0.29.0 / transformers 4.57.6 / huggingface_hub 0.36.2 and continued without a restart request; the saved RUNTIME reports torch 2.14.0+cu130, NumPy 2.1.3, Pillow 11.3.0.
+- **Executed cells:** 23/23 code cells, execution counts 1–23 in order, 0 saved errors. Five inline images rendered: 2 reference previews, 2 comparison panels, 1 evaluator view.
+- **Sample:** digest `af9390b9…` reproduced; 364 images, 4,886 boxes; 94 test images with 1,295 objects.
+- **Peak GPU memory:** Grounding DINO 1.85 GB; OWLv2 1.95 GB.
+- **Mean latency:** Grounding DINO 0.460 s/image; OWLv2 0.694 s/image.
+
+| Metric | Grounding DINO Tiny | OWLv2 Base/16 | Previous T4 run (2026-09-26, pre-fix code) |
+|---|---|---|---|
+| mAP50 | 0.1088 | 0.0537 | 0.1088 / 0.0537 |
+| mAP75 | 0.0523 | 0.0331 | 0.0523 / 0.0331 |
+| mAP50-95 | 0.0603 | 0.0295 | 0.0603 / 0.0294 |
+| recall50 | 0.2927 | 0.0680 | 0.2927 / 0.0680 |
+| predictions | 5,173 | 1,506 | 5,173 / 1,506 |
+| unique matches @0.50 | 379 | 88 | — |
+| duplicate / wrong phrase / spurious | 325 / 1,056 / 3,413 | 0 / 797 / 621 | — |
+
+The primary metrics equal the pre-fix T4 run except OWLv2 mAP50-95 (0.0294 → 0.0295), the expected effect of clipping OWLv2 boxes to the image. Unique matches equal the AP evaluator's recall50 matches (the notebook's own assertion passed). The Grounding DINO prompt-order probe returned 69 vs 70 boxes; this differs from the CPU run (69 vs 69) because of GPU numerics near the score floor, and the notebook reports it as observed.
+
+| Journey | Verdict |
+|---|---|
+| Default Run all (M1 validation active on real outputs, M2 diagnostics, M3 inline visuals, 4.5 inventory) | **Pass** |
+| Threshold sweep (separate copy, `RUN_THRESHOLD_SWEEP=True`) | Not assessed in this run |
+| BYOD, real models (valid and invalid inputs; REL12) | Not assessed in this run |
+| Export re-run | Not assessed in this run |
+
+**Evidence boundary:** the saved outputs were inspected; execution was not independently repeated. The exported files themselves were not supplied, so only their printed SHA-256 prefixes and the inventory count (14 files) were inspected. Freshness of the runtime and absence of manual reruns are supported by the sequential execution counts but not otherwise established.
+
+**Status:** remains **Candidate**. Open before promotion: the threshold-sweep copy, real-model BYOD runs (REL12), and a learner walkthrough.
