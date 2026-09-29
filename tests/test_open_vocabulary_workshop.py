@@ -484,7 +484,8 @@ def test_visual_handoff_and_export_contracts_in_source():
 def test_title_strip_does_not_cover_boxes_at_the_top_edge():
     from PIL import ImageColor, ImageDraw
 
-    ns = {"Image": Image, "ImageDraw": ImageDraw, "ImageColor": ImageColor, "PHRASE_COLORS": {"platelet": "gold"}}
+    ns = {"Image": Image, "ImageDraw": ImageDraw, "ImageColor": ImageColor,
+          "PHRASE_COLORS": {"platelet": "gold"}}
     functions_from(ns, "5750ceab", {"title_bar", "draw_boxes"})
     image = Image.new("RGB", (200, 100), "black")
     out = ns["draw_boxes"](image, [(0.9, "platelet", [0, 0, 200, 100])], "title")
