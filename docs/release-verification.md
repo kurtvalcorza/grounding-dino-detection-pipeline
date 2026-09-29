@@ -237,3 +237,36 @@ These CPU numbers agree with the recorded 2026-09-26 T4 run to within GPU/CPU nu
 Follow-up in the same PR: panel titles now sit in a 22-px strip above the image instead of being painted over its top 22 rows, so boxes and labels at the top edge stay visible (panels are 22 px taller), and each box label has a filled backing in its phrase colour with black or white text chosen for contrast. The CPU run above predates these display-only changes.
 
 Remaining before promotion: a fresh hosted T4 `Run all` of the committed blob (defaults, then a separate copy with `RUN_THRESHOLD_SWEEP=True`), and real-model labelled BYOD positive and invalid-input runs (REL12). Learner walkthrough remains unperformed.
+
+### Maintainer-supplied Colab execution of revision `563b0f6` — 2026-09-30
+
+- **File:** [executed notebook](execution-evidence/2026-09-30/DIMER_Open_Vocabulary_Object_Detection_Workshop_563b0f6.ipynb), archived byte-for-byte, SHA-256 `b22a233f56e11cb5620f76379a408db950d2475c7f33b7a0227b3b2c1d421636`.
+- **Source match:** all 56 cells have the same ids and order as PR-head commit `563b0f6` (notebook blob `07b6a321`). Code-cell sources are identical; no `# @param` value was changed, so this is the default path (`USE_BYOD=False`, `RUN_PROMPT_EXPERIMENT=True`, `RUN_THRESHOLD_SWEEP=False`).
+- **Runtime:** Colab Tesla T4, Python 3.13.15. The setup cell installed torch 2.14.0 / torchvision 0.29.0 / transformers 4.57.6 / huggingface_hub 0.36.2 and continued without a restart request; the saved RUNTIME reports torch 2.14.0+cu130, NumPy 2.1.3, Pillow 11.3.0.
+- **Executed cells:** 23/23 code cells, execution counts 1–23 in order, 0 saved errors. Five inline images rendered: 2 reference previews, 2 comparison panels, 1 evaluator view.
+- **Sample:** digest `af9390b9…` reproduced; 364 images, 4,886 boxes; 94 test images with 1,295 objects.
+- **Peak GPU memory:** Grounding DINO 1.85 GB; OWLv2 1.95 GB.
+- **Mean latency:** Grounding DINO 0.460 s/image; OWLv2 0.694 s/image.
+
+| Metric | Grounding DINO Tiny | OWLv2 Base/16 | Previous T4 run (2026-09-26, pre-fix code) |
+|---|---|---|---|
+| mAP50 | 0.1088 | 0.0537 | 0.1088 / 0.0537 |
+| mAP75 | 0.0523 | 0.0331 | 0.0523 / 0.0331 |
+| mAP50-95 | 0.0603 | 0.0295 | 0.0603 / 0.0294 |
+| recall50 | 0.2927 | 0.0680 | 0.2927 / 0.0680 |
+| predictions | 5,173 | 1,506 | 5,173 / 1,506 |
+| unique matches @0.50 | 379 | 88 | — |
+| duplicate / wrong phrase / spurious | 325 / 1,056 / 3,413 | 0 / 797 / 621 | — |
+
+The primary metrics equal the pre-fix T4 run except OWLv2 mAP50-95 (0.0294 → 0.0295), the expected effect of clipping OWLv2 boxes to the image. Unique matches equal the AP evaluator's recall50 matches (the notebook's own assertion passed). The Grounding DINO prompt-order probe returned 69 vs 70 boxes; this differs from the CPU run (69 vs 69) because of GPU numerics near the score floor, and the notebook reports it as observed.
+
+| Journey | Verdict |
+|---|---|
+| Default Run all (M1 validation active on real outputs, M2 diagnostics, M3 inline visuals, 4.5 inventory) | **Pass** |
+| Threshold sweep (separate copy, `RUN_THRESHOLD_SWEEP=True`) | Not assessed in this run |
+| BYOD, real models (valid and invalid inputs; REL12) | Not assessed in this run |
+| Export re-run | Not assessed in this run |
+
+**Evidence boundary:** the saved outputs were inspected; execution was not independently repeated. The exported files themselves were not supplied, so only their printed SHA-256 prefixes and the inventory count (14 files) were inspected. Freshness of the runtime and absence of manual reruns are supported by the sequential execution counts but not otherwise established.
+
+**Status:** remains **Candidate**. Open before promotion: the threshold-sweep copy, real-model BYOD runs (REL12), and a learner walkthrough.
