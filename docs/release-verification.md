@@ -234,4 +234,6 @@ CPU real-model execution (not hosted, not clean-runtime evidence): the notebook'
 
 These CPU numbers agree with the recorded 2026-09-26 T4 run to within GPU/CPU numerical noise (T4: Grounding DINO 0.1088 / 0.0523 / 0.0603 / 0.2927 / 5,173; OWLv2 0.0537 / 0.0331 / 0.0294 / 0.0680 / 1,506). All 5 inline displays rendered (2 reference previews, 2 comparison panels, 1 evaluator view); the 15-file inventory was verified by the terminal cell. BYOD was not exercised with real models.
 
+Follow-up in the same PR: panel titles now sit in a 22-px strip above the image instead of being painted over its top 22 rows, so boxes and labels at the top edge stay visible (panels are 22 px taller). The CPU run above predates this display-only change.
+
 Remaining before promotion: a fresh hosted T4 `Run all` of the committed blob (defaults, then a separate copy with `RUN_THRESHOLD_SWEEP=True`), and real-model labelled BYOD positive and invalid-input runs (REL12). Learner walkthrough remains unperformed.
