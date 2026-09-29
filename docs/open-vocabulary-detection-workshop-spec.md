@@ -399,11 +399,17 @@ Requirements:
 - prompt belongs to the supplied vocabulary;
 - coordinates are mapped to original image pixels;
 - coordinates finite;
-- positive box area;
+- ordered box coordinates (`x0 ≤ x1`, `y0 ≤ y1`); a box clipped to zero area is kept and simply cannot match;
 - boxes clipped to image bounds;
 - score finite;
 - score in `[0, 1]`;
 - detections sorted by descending score per image.
+
+These requirements are enforced, not assumed: each adapter validates its raw model output (finite logits at
+active text positions, finite boxes, expected shapes) before thresholding, and the common evaluator and every
+export validate the normalized predictions again. A violation stops the run with an error; it is never scored
+as an empty or a perfect result. An empty list for an image is valid. JSON exports are written with
+`allow_nan=False`.
 
 This normalized representation is the boundary between model-specific inference and common evaluation.
 
@@ -822,7 +828,8 @@ For every held-out image:
 3. process the 3,600 patch candidates;
 4. choose the best text query for every patch;
 5. retain candidates with score ≥ `EVAL_SCORE_FLOOR`;
-6. map boxes to original pixel coordinates;
+6. map boxes to original pixel coordinates (the upstream post-processing rescales by the padded square's side)
+   and clip them to the image, since a box can reach into the padded area;
 7. normalize into the common schema.
 
 The stage SHOULD retain:
@@ -924,7 +931,9 @@ This section is essential because aggregate mAP can hide concept-specific failur
 
 # 30. Object-level disagreement analysis
 
-For every ground-truth box, calculate each model's best **same-phrase** prediction.
+For every ground-truth box, determine whether each model matched it in a **one-to-one** assignment (the AP
+evaluator's greedy rule; see Section 33), so that one prediction can match at most one object. Also keep each
+model's best same-phrase overlap as a separate coverage column.
 
 Produce:
 
@@ -937,15 +946,19 @@ gt_box
 grounding_dino_detected
 grounding_dino_score
 grounding_dino_iou
+grounding_dino_best_overlap_iou
 
 owlv2_detected
 owlv2_score
 owlv2_iou
+owlv2_best_overlap_iou
 ```
 
-A detection counts as successful when:
+A detection counts as successful when the object is **assigned its own prediction** with:
 
 `same phrase AND IoU >= 0.50`
+
+The number of successful detections must equal the AP evaluator's recall50 matches.
 
 ---
 
@@ -1017,22 +1030,31 @@ no candidate overlaps the object
 
 Neither canonical pipeline applies NMS.
 
-The notebook should therefore quantify redundant detections.
+The notebook should therefore quantify duplicate detections.
 
-For each ground-truth object:
-
-1. find same-phrase predictions with IoU ≥ 0.50;
-2. the highest-scoring prediction counts as the primary match;
-3. additional qualifying boxes count as redundant detections.
+Use a one-to-one assignment with the AP evaluator's greedy rule (predictions by descending score, each claiming
+the best-overlapping unclaimed same-phrase object at IoU ≥ 0.50), so that each prediction and each object is
+counted exactly once. Every prediction is a true positive, a **duplicate** (overlaps a same-phrase object that a
+higher-scoring box already claimed), a wrong-phrase box or a spurious box; every object is matched or missed.
 
 Report:
 
 ```text
 model
-primary_matches
-redundant_same-object_boxes
-mean_redundant_boxes_per_matched_object
+objects
+predictions
+true_positives
+missed_objects
+duplicate_predictions
+wrong_phrase_predictions
+spurious_predictions
+unmatched_predictions
+overlap_coverage_objects
 ```
+
+`overlap_coverage_objects` (objects with any qualifying same-phrase box, boxes reusable) is coverage, not a
+count of distinct detections. Counting every qualifying box per object independently would let one merged box
+over two overlapping cells count as two matches, and two exact boxes on two neighbouring cells as duplicates.
 
 This is a diagnostic statistic, not a standard benchmark metric.
 
@@ -1157,10 +1179,12 @@ Run on a small predetermined image subset.
 
 For each model/floor, record:
 
+- reference objects (support);
 - total candidate boxes;
-- correctly matched ground-truth objects;
-- redundant detections;
-- unmatched predictions.
+- uniquely matched objects (true positives) and missed objects, with recall;
+- duplicate, wrong-phrase and spurious predictions (together, the unmatched predictions),
+
+all from the one-to-one assignment of Section 33.
 
 The notebook MUST state:
 
@@ -1463,10 +1487,12 @@ gt_box
 grounding_dino_detected
 grounding_dino_score
 grounding_dino_iou
+grounding_dino_best_overlap_iou
 
 owlv2_detected
 owlv2_score
 owlv2_iou
+owlv2_best_overlap_iou
 
 comparison_category
 ```
@@ -1480,9 +1506,10 @@ model
 image_id
 prompt_set
 prompt
+gt_support
 n_detections
 best_score
-best_same_class_iou
+best_same_class_iou   (empty when gt_support is 0)
 ```
 
 ---
@@ -1495,11 +1522,21 @@ Only when enabled:
 model
 score_floor
 image_count
+objects
 detections
-matched_objects
-redundant_detections
-unmatched_detections
+true_positives
+missed_objects
+recall
+duplicate_predictions
+wrong_phrase_predictions
+spurious_predictions
+unmatched_predictions
 ```
+
+`detected`, `score` and `iou` in `object_analysis.csv` describe the one-to-one match; `*_best_overlap_iou` is the
+best same-phrase overlap, where one box may serve several objects. A stale `threshold_sweep.csv` from an earlier
+run is removed when the sweep is disabled, and `output_inventory.json` lists this run's `RUN_ID` and the size and
+SHA-256 of every exported file.
 
 ---
 
