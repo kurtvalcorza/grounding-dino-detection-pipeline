@@ -1,47 +1,41 @@
-"""Reproduce Colab's already imported NumPy without model installation."""
+"""Colab's already imported NumPy is never replaced: the setup installs nothing into the kernel.
+
+Before 2026-10-03 this test simulated the in-kernel pip install and checked that it kept Colab's
+preloaded NumPy. The models now run in a uv isolated environment, so the setup cell must leave the
+kernel's packages alone entirely: every subprocess it starts is the pinned uv binary, and the only
+install targets the isolated interpreter.
+"""
 import ast
-import importlib.metadata
 import json
-import subprocess
-import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 
-def test_colab_preloaded_numpy_survives_setup(monkeypatch):
+def runtime_cell():
     root = Path(__file__).resolve().parents[1]
     path = root / "tutorials" / "DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb"
     notebook = json.loads(path.read_text(encoding="utf-8"))
-    tree = ast.parse("".join(notebook["cells"][7]["source"]))
-    prefix = []
-    for node in tree.body:
-        if isinstance(node, ast.Import) and any(a.name == "numpy" for a in node.names):
-            break
-        prefix.append(node)
-    pin_node = next(n for n in prefix if isinstance(n, ast.Assign)
-                    and isinstance(n.targets[0], ast.Name) and n.targets[0].id == "PINS")
-    pins = ast.literal_eval(pin_node.value)
-    installed = dict(pins) if isinstance(pins, dict) else dict(
-        p.split("==", 1) for p in pins if "==" in p
-    )
-    installed["numpy"] = "2.1.3"
-    monkeypatch.setattr(importlib.metadata, "version", lambda name: installed[name])
-    for name in ("torch", "torchvision", "torchaudio", "transformers", "PIL", "scipy",
-                 "safetensors", "huggingface_hub", "pyarrow"):
-        monkeypatch.delitem(sys.modules, name, raising=False)
-    loaded_numpy = SimpleNamespace(__version__="2.1.3")
-    monkeypatch.setitem(sys.modules, "numpy", loaded_numpy)
-    monkeypatch.delenv("DIMER_NOTEBOOK_CI_PREINSTALLED", raising=False)
+    return next("".join(c["source"]) for c in notebook["cells"] if c.get("id") == "326fd12e")
 
-    def install(command, **kwargs):
-        for item in command:
-            if "==" in item:
-                name, version = item.split("==", 1)
-                installed[name] = version
-        return subprocess.CompletedProcess(command, 0, "", "")
 
-    monkeypatch.setattr(subprocess, "run", install)
-    monkeypatch.setattr(subprocess, "check_call", lambda command, **kw: install(command, **kw).returncode)
-    exec(compile(ast.Module(body=prefix, type_ignores=[]), "notebook-setup", "exec"), {})
-    assert installed["numpy"] == loaded_numpy.__version__ == "2.1.3"
-    assert sys.modules["numpy"] is loaded_numpy
+def test_colab_preloaded_numpy_survives_setup():
+    source = runtime_cell()
+    tree = ast.parse(source)
+    assert "PINS" not in source and "importlib.metadata" not in source and "sys.executable" not in source
+    calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name) and node.func.value.id == "subprocess"
+    ]
+    installs = []
+    for call in calls:
+        if call.func.attr == "Popen":  # stage runs use the isolated interpreter
+            continue
+        assert call.func.attr == "run"
+        command = ast.unparse(call.args[0])
+        assert command.startswith("[str(UV), "), command
+        if "'install'" in command:
+            installs.append(command)
+    assert len(installs) == 1
+    assert "'--python', str(PYTHON)" in installs[0]
+    # The kernel imports the NumPy it already has, after (and independent of) the environment build.
+    assert any(isinstance(n, ast.Import) and any(a.name == "numpy" for a in n.names) for n in tree.body)
