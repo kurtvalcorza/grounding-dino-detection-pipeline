@@ -2,6 +2,7 @@ import ast
 import csv
 import gc
 import hashlib
+import importlib.util
 import json
 import types
 import weakref
@@ -16,6 +17,18 @@ NOTEBOOK = (
     Path(__file__).resolve().parents[1] / "tutorials/DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb"
 )
 CELLS = json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"]
+CELL_BY_ID = {cell["id"]: "".join(cell["source"]) for cell in CELLS}
+# 2026-10-03: model stages moved from the kernel into this carried file (uv isolated environment).
+RUNNER = Path(__file__).resolve().parents[1] / "tools" / "ovd_workshop.py"
+RUNNER_SOURCE = RUNNER.read_text(encoding="utf-8")
+
+
+def load_runner():
+    """A fresh copy of the carried stage module, so tests can replace its model globals."""
+    spec = importlib.util.spec_from_file_location("ovd_workshop_under_test", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def helpers(tmp_path):
@@ -34,13 +47,13 @@ def helpers(tmp_path):
         "GDINO_MANIFEST": {"modelId": "gd", "revision": "pinned"},
         "OWLV2_MANIFEST": {"modelId": "owl", "revision": "pinned"},
     }
-    for i in [13, 15, 17]:
-        module = ast.parse("".join(CELLS[i]["source"]))
+    for cell_id in ["dc0711bb", "7fff2d1b", "ff6dbcd8"]:
+        module = ast.parse(CELL_BY_ID[cell_id])
         module.body = [node for node in module.body if isinstance(node, ast.FunctionDef)]
         exec(compile(module, "helper", "exec"), ns)
     ns.update(MAX_PROMPTS=16, MAX_PROMPT_CHARS=48)
     ns["sha256_file"] = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()
-    exec("".join(CELLS[47]["source"]), ns)
+    exec(CELL_BY_ID["3f9f36da"], ns)
     return ns
 
 
@@ -108,19 +121,14 @@ def test_reject_bad_byod(tmp_path, change):
 
 
 def test_runtime_public_versions():
-    from packaging.version import Version
-
-    module = ast.parse("".join(CELLS[7]["source"]))
-    module.body = [
-        n for n in module.body if isinstance(n, ast.FunctionDef) and n.name == "public_version_matches"
-    ]
-    ns = {"Version": Version}
-    exec(compile(module, "guard", "exec"), ns)
-    assert ns["public_version_matches"]("2.14.0+cu130", "2.14.0")
-    assert not ns["public_version_matches"]("2.14.0rc1", "2.14.0")
+    # The version guard now runs in the isolated environment's runtime stage.
+    runner = load_runner()
+    assert runner.public_version_matches("2.14.0+cu130", "2.14.0")
+    assert not runner.public_version_matches("2.14.0rc1", "2.14.0")
 
 
 def fake_models(ns, fail=False, bad_tokens=False):
+    # ns is the carried stage module's namespace: BYOD inference runs there since 2026-10-03.
     refs = []
     events = []
 
@@ -178,7 +186,7 @@ def fake_models(ns, fail=False, bad_tokens=False):
 
 
 def test_inference_sequential_release_and_retry(tmp_path):
-    ns = helpers(tmp_path)
+    ns = vars(load_runner())
     refs, events = fake_models(ns)
     for _ in range(2):
         assert ns["predict_byod"]([{"image": None}], ["a cell"]) == ([[]], [[]])
@@ -187,7 +195,7 @@ def test_inference_sequential_release_and_retry(tmp_path):
 
 
 def test_failure_retained_traceback_does_not_keep_model(tmp_path):
-    ns = helpers(tmp_path)
+    ns = vars(load_runner())
     refs, events = fake_models(ns, fail=True)
     errors = []
     for _ in range(2):
@@ -200,7 +208,7 @@ def test_failure_retained_traceback_does_not_keep_model(tmp_path):
 
 
 def test_bad_tokens_rejected_before_model_load(tmp_path):
-    ns = helpers(tmp_path)
+    ns = vars(load_runner())
     refs, events = fake_models(ns, bad_tokens=True)
     with pytest.raises(ValueError):
         ns["predict_byod"]([{"image": None}], ["a cell"])
@@ -242,8 +250,8 @@ def test_bccd_parse_drops_zero_area_points_and_rejects_other_bad_boxes(tmp_path)
 
 
 def test_bccd_pinned_counts_account_for_the_zero_area_points():
-    constants = "".join(CELLS[11]["source"])
-    loader = "".join(CELLS[13]["source"])
+    constants = CELL_BY_ID["da2d9395"]
+    loader = CELL_BY_ID["dc0711bb"]
     assert 'BCCD_ZERO_AREA_BOXES = ["BloodImage_00338", "BloodImage_00343"]' in constants
     assert "BCCD_EXPECTED_BOXES = 4_886" in constants
     assert "!= BCCD_ZERO_AREA_BOXES" in loader
@@ -252,11 +260,8 @@ def test_bccd_pinned_counts_account_for_the_zero_area_points():
 # ---------------------------------------------------------------------------
 # 2026-09-30 review: output validation, one-to-one diagnostics, visual handoff.
 
-CELL_BY_ID = {cell["id"]: "".join(cell["source"]) for cell in CELLS}
-
-
 def functions_from(ns, cell_id, names=None):
-    module = ast.parse(CELL_BY_ID[cell_id])
+    module = ast.parse(RUNNER_SOURCE if cell_id == "runner" else CELL_BY_ID[cell_id])
     module.body = [
         n for n in module.body if isinstance(n, ast.FunctionDef) and (names is None or n.name in names)
     ]
@@ -310,7 +315,7 @@ def gdino_namespace(tmp_path, logits, boxes):
     ns = helpers(tmp_path)
     ns.update(torch=torch, GDINO_SPECIAL_TOKEN_IDS=(101, 102, 1012, 1029, 0), GDINO_MAX_TEXT_TOKENS=256,
               DEVICE="cpu")
-    functions_from(ns, "53f2f300", {"gdino_prompt_text", "phrase_token_groups", "gdino_predict"})
+    functions_from(ns, "runner", {"gdino_prompt_text", "phrase_token_groups", "gdino_predict"})
     ids = torch.tensor([[101, 7, 1012, 8, 1012, 102]])  # "a. b." -> phrase tokens at 1 and 3
     ns["gdino_processor"] = lambda **k: _Inputs(input_ids=ids)
     ns["gdino_model"] = lambda **k: types.SimpleNamespace(logits=logits, pred_boxes=boxes)
@@ -352,7 +357,7 @@ def owlv2_namespace(tmp_path, logits, boxes):
     upstream = owlv2.Owlv2ImageProcessor()
     ns = helpers(tmp_path)
     ns.update(torch=torch, DEVICE="cpu")
-    functions_from(ns, "2f66f39b", {"owlv2_predict"})
+    functions_from(ns, "runner", {"owlv2_predict"})
 
     class Processor:
         def __call__(self, **k):
@@ -478,7 +483,8 @@ def test_visual_handoff_and_export_contracts_in_source():
     assert "unlink(missing_ok=True)" in CELL_BY_ID["1b4955b0"]  # no stale threshold_sweep.csv
     assert "output_inventory.json" in CELL_BY_ID["5dbbe2be"]
     assert "rounded_detection_sets_identical" in CELL_BY_ID["80f45dd6"]
-    assert "min(max(y1, 0.0), height)" in CELL_BY_ID["2f66f39b"]  # OWLv2 boxes clipped to the image
+    assert "min(max(y1, 0.0), height)" in RUNNER_SOURCE  # OWLv2 boxes clipped to the image
+    assert 'show_source("owlv2_predict")' in CELL_BY_ID["2f66f39b"]  # ...and the adapter is shown there
 
 
 def test_title_strip_does_not_cover_boxes_at_the_top_edge():
