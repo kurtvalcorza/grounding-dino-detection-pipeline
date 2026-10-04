@@ -79,7 +79,7 @@ The default path needs a Linux x86_64 runtime with a CUDA GPU in practice: Secti
 
 ## Release status
 
-**Candidate** — the `E2E` notebook was regenerated on 2026-10-04 for the notebook-review findings (GDD-M1..M4, GDD-m1..m4): it now runs in a hash-locked uv isolated environment (CPython 3.12.12, Linux x86_64 only) with no manual restart, and a hosted one-pass GPU Run all of the new blob is pending. The only hosted record of the previous blob (`dc1218be`, Kaggle Tesla T4, 2026-09-20) completed only after a manual restart after the in-kernel install, so it is not promotion evidence; see `docs/release-verification.md` and `STATUS.md`. Static and unit checks — including the standalone generator parity checks — are necessary but are never the evidence; the hosted run is.
+**Candidate** — the `E2E` notebook was regenerated on 2026-10-04 for the notebook-review findings (GDD-M1..M4, GDD-m1..m4): it now runs in a hash-locked uv isolated environment (CPython 3.12.12, Linux x86_64 only) with no manual restart, and a Colab CLI sequential execution of the new blob on a fresh Tesla T4 (2026-10-04) passed in one pass with no restart and 0 errors; BYOD and the experiment re-run are still open. The only hosted record of the previous blob (`dc1218be`, Kaggle Tesla T4, 2026-09-20) completed only after a manual restart after the in-kernel install, so it is not promotion evidence; see `docs/release-verification.md` and `STATUS.md`. Static and unit checks — including the standalone generator parity checks — are necessary but are never the evidence; the hosted run is.
 
 ## Documentation
 

@@ -1,0 +1,65 @@
+[colab] Parsing notebook '/home/kurt/colab-runs/grounding-dino-detection-pipeline-a2bdaaf-d705a2/grounding_dino_detection_colab_a2bdaaf_colab-cli-t4.ipynb'...
+[colab] Executing cell 1/13 - Infrastructure: install the locked runtime into an isolated environment...
+{'isolated_environment': '/content/dimer_isolated_env', 'isolated_python': '3.12.12', 'kernel_python': '3.13.15', 'locked_packages': 48, 'setup_seconds': 61}
+[colab] Executing cell 2/13 - Infrastructure: route the remaining cells to the isolated environment...
+Every later code cell now runs in /content/dimer_isolated_env/bin/python (pid 2605).
+[colab] Executing cell 3/13 - Infrastructure: record the runtime...
+{'notebook_source': {'repository': 'grounding-dino-detection-pipeline', 'repository_revision': '18f9a171eaa41540b3dda66c37e08432c2669323', 'embedded_module': 'src/grounding_dino_detection_pipeline/pipeline.py', 'embedded_modules': ['src/grounding_dino_detection_pipeline/pipeline.py', 'src/grounding_dino_detection_pipeline/metrics.py', 'src/grounding_dino_detection_pipeline/samples.py'], 'module_sha256': 'ebf733b7fe28909ac6df574304e487017bfef7799be5077f39ecf2aee15fd4ea', 'generator': 'build_notebook.py/2.1', 'notebook_spec': '2.2'}, 'python': '3.12.12', 'torch': '2.14.0+cu130', 'transformers': '4.57.6', 'cuda': True}
+[colab] Executing cell 4/13 - Infrastructure: carried module `src/grounding_dino_detection_pipeline/pipeline.py` (you may run it without reading it)...
+[colab] Executing cell 5/13 - Infrastructure: carried module `src/grounding_dino_detection_pipeline/metrics.py` (you may run it without reading it)...
+[colab] Executing cell 6/13 - Infrastructure: carried module `src/grounding_dino_detection_pipeline/samples.py` (you may run it without reading it)...
+[colab] Executing cell 7/13 - Infrastructure: pin, stage and verify the model (you may run it without reading it)...
+{'model_id': 'IDEA-Research/grounding-dino-tiny', 'revision': 'a2bb814dd30d776dcf7e30523b00659f4f141c71', 'license': 'apache-2.0', 'files': 9, 'total_bytes': 690308125}
+{'weights_dir': '/content/weights/grounding-dino-tiny', 'fetched': ['README.md', 'added_tokens.json', 'config.json', 'model.safetensors', 'preprocessor_config.json', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.txt']}
+{'verified_files': 9, 'revision': 'a2bb814dd30d776dcf7e30523b00659f4f141c71'}
+{'device': 'cuda:0', 'source': 'local-snapshot'}
+[colab] Executing cell 8/13 - grounding_dino_detection-17...
+{'data_source': 'BCCD blood-cell detection (Shenggan/BCCD_Dataset) @ d272fb14cdff (MIT (https://github.com/Shenggan/BCCD_Dataset/blob/master/LICENSE))', 'raw_rows': {'photographs': 364, 'bytes': 7575393, 'boxes': 4886, 'seconds': 112.9}, 'splits': {'train': 220, 'validation': 50, 'test': 94}, 'split_unit': 'photograph (decoded pixels); no slide or patient field', 'vocabulary': ['red blood cell', 'white blood cell', 'platelet'], 'prompt_text': 'red blood cell. white blood cell. platelet.'}
+{'byod_minimum_distinct_images': 12, 'split_minimums': {'train': 8, 'validation': 2, 'test': 2}}
+{'train': {'n': 220, 'boxes': 2942, 'label_counts': {'red blood cell': 2504, 'white blood cell': 226, 'platelet': 212}, 'boxes_per_image': {'min': 1, 'max': 25}, 'digest': '1ea90ee782e4df31...'}}
+{'validation': {'n': 50, 'boxes': 649, 'label_counts': {'red blood cell': 545, 'white blood cell': 53, 'platelet': 51}, 'boxes_per_image': {'min': 1, 'max': 24}, 'digest': 'ee2ec795a89ceefb...'}}
+{'test': {'n': 94, 'boxes': 1295, 'label_counts': {'red blood cell': 1104, 'white blood cell': 93, 'platelet': 98}, 'boxes_per_image': {'min': 1, 'max': 30}, 'digest': '68f2db4d34b911ec...'}}
+{'example': {'id': 'bccd-BloodImage_00397', 'image': [640, 480], 'n_boxes': 18, 'first_box': [68.0, 154.0, 165.0, 249.0], 'first_label': 'red blood cell', 'source': 'Shenggan/BCCD_Dataset@d272fb14cdff'}}
+{'probe': 'duplicate id', 'rejected': "duplicate id 'same'"}
+{'probe': 'box outside its image', 'rejected': 'records[0]: boxes[0] [-5.0, 0.0, 20.0, 20.0] is not a non-empty box inside the 640x480 image'}
+{'probe': 'label outside the vocabulary', 'rejected': "records[0]: labels[0] 'stem cell' is not in the prompt vocabulary ['red blood cell', 'white blood cell', 'plat"}
+{'probe': 'too small', 'rejected': '3 records; 8..5000 are required'}
+[colab] Executing cell 9/13 - grounding_dino_detection-19...
+{'ceilings': {'MIN_IMAGE_SIDE': 16, 'MAX_IMAGE_SIDE': 4096, 'MAX_PROMPTS': 16, 'MAX_PROMPT_CHARS': 48, 'MAX_TEXT_TOKENS': 256, 'BOX_THRESHOLD': 0.4, 'TEXT_THRESHOLD': 0.3, 'SCORE_FLOOR': 0.05, 'MAX_BOXES': 300, 'MIN_RECORDS': 8, 'MAX_RECORDS': 5000, 'device': 'cuda:0'}}
+{'scene': 'synthetic_scene_320x240.png', 'sha256': 'c51d11b2074ee4f6...', 'manifest_verdict': 'accepted', 'findings': 1}
+{'frozen': {'seconds': 2.714, 'checks': {'sorted_by_score': True, 'boxes_inside_image': True, 'identity_reported': True}, 'detections': [('red circle', 0.931), ('rectangle', 0.695)], 'box_iou': {'rectangle': 0.964, 'red circle': 0.944}, 'verdict': 'sample-sanity'}}
+[colab] Executing cell 10/13 - grounding_dino_detection-21...
+{'grid_prior_baseline': {'map50': 0.009, 'map75': 0.0, 'recall50': 0.199}, 'n': 94, 'note': "a grid of 107x101 px boxes labelled 'red blood cell'"}
+{'generic_prompt_baseline': {'map50': 0.075, 'map75': 0.027, 'recall50': 0.514}, 'generic_prompt': 'cell', 'note': "every predicted box relabelled 'red blood cell'", 'seconds': 44.8}
+{'frozen_model_test': {'map50': 0.109, 'map75': 0.052, 'recall50': 0.293}, 'n': 94, 'boxes': 1295, 'predictions': 5173, 'adapted': False, 'verdict': 'measured', 'seconds': 48.9}
+{'definitions': {'map50': 'mean over the prompt vocabulary of the Pascal-VOC average precision (all-point interpolation) at IoU >= 0.5; in 0..1, higher is better', 'map75': 'the same average precision at IoU >= 0.75 — the stricter localisation bar', 'recall50': 'share of labelled boxes matched by a prediction of the same phrase at IoU >= 0.5, over every prediction kept; in 0..1'}}
+{'by_phrase_frozen': {'red blood cell': {'n': 1104, 'ap50': 0.041, 'ap75': 0.014}, 'white blood cell': {'n': 93, 'ap50': 0.285, 'ap75': 0.143}, 'platelet': {'n': 98, 'ap50': 0.0, 'ap75': 0.0}}}
+{'frozen_beats_grid_prior': True, 'frozen_beats_generic_prompt': True}
+[colab] Executing cell 11/13 - grounding_dino_detection-23...
+{'epoch': 0, 'train_loss': None, 'val_map50': 0.161, 'val_map75': 0.132, 'val_recall50': 0.327, 'note': 'frozen model'}
+{'epoch': 1, 'train_loss': 11411.0, 'val_map50': 0.341, 'val_map75': 0.264, 'val_recall50': 0.884}
+{'epoch': 2, 'train_loss': 11408.8, 'val_map50': 0.422, 'val_map75': 0.336, 'val_recall50': 0.937}
+{'epoch': 3, 'train_loss': 11182.4, 'val_map50': 0.525, 'val_map75': 0.436, 'val_recall50': 0.969}
+{'epoch': 4, 'train_loss': 11296.0, 'val_map50': 0.568, 'val_map75': 0.47, 'val_recall50': 0.969}
+{'epoch': 5, 'train_loss': 11262.3, 'val_map50': 0.637, 'val_map75': 0.495, 'val_recall50': 0.977}
+{'epoch': 6, 'train_loss': 11312.8, 'val_map50': 0.695, 'val_map75': 0.522, 'val_recall50': 0.978}
+{'trainable_parameters': 11187460, 'total_parameters': 172249090, 'learning_rate': 5e-05, 'seed': 0, 'best_epoch': 6, 'selection': 'highest validation mAP50', 'selection_split': 'validation', 'loss': 'upstream Grounding DINO criterion: Hungarian matching, sigmoid-focal query-to-phrase alignment (weight 1), L1 (5) and generalised-IoU (2) box terms', 'seconds': 879.3}
+[colab] Executing cell 12/13 - grounding_dino_detection-25...
+{'map50': {'grid_prior': 0.009, 'generic_prompt': 0.075, 'frozen': 0.109, 'adapted': 0.63}}
+{'map75': {'grid_prior': 0.0, 'generic_prompt': 0.027, 'frozen': 0.052, 'adapted': 0.461}}
+{'recall50': {'grid_prior': 0.199, 'generic_prompt': 0.514, 'frozen': 0.293, 'adapted': 0.957}}
+{'delta_vs_frozen': {'map50': 0.521, 'map75': 0.409, 'recall50': 0.664}}
+{'delta_vs_generic_prompt': {'map50': 0.555, 'map75': 0.434, 'recall50': 0.442}}
+{'by_phrase': {'red blood cell': {'n': 1104, 'frozen_ap50': 0.041, 'adapted_ap50': 0.809, 'frozen_ap75': 0.014, 'adapted_ap75': 0.608}, 'white blood cell': {'n': 93, 'frozen_ap50': 0.285, 'adapted_ap50': 0.715, 'frozen_ap75': 0.143, 'adapted_ap75': 0.626}, 'platelet': {'n': 98, 'frozen_ap50': 0.0, 'adapted_ap50': 0.366, 'frozen_ap75': 0.0, 'adapted_ap75': 0.149}}}
+{'frozen_beats_grid_prior': True, 'frozen_beats_generic_prompt': True, 'adapted_beats_frozen': True, 'adapted_beats_both_baselines': True, 'best_epoch': 6}
+Reading: mAP50 and mAP75 both rose: more boxes carry the right phrase, and they fit more tightly.
+run   data epochs       lr best  frozen   mAP50   mAP75
+  1 sample      6    5e-05    6   0.109   0.630   0.461
+{'report': 'outputs/grounding_dino_detection_evaluation_report.json'}
+[colab] Executing cell 13/13 - grounding_dino_detection-27...
+{'adapted': {'seconds': 0.481, 'checks': {'sorted_by_score': True, 'boxes_inside_image': True, 'identity_reported': True}, 'detections': [('red circle', 0.91), ('rectangle', 0.517)], 'box_iou': {'rectangle': 0.924, 'red circle': 0.883}, 'verdict': 'sample-sanity'}}
+{'examples': ['bccd-BloodImage_00124.png', 'bccd-BloodImage_00289.png', 'bccd-BloodImage_00312.png', 'bccd-BloodImage_00325.png'], 'panel_order': ['frozen boxes >= BOX_THRESHOLD', 'adapted boxes >= BOX_THRESHOLD', 'labelled boxes'], 'colours': {'red blood cell': (255, 60, 60), 'white blood cell': (60, 200, 60), 'platelet': (60, 120, 255)}}
+{'artifact': 'outputs/grounding_dino_detection_adapter', 'format': 'org.valcorza.grounding-dino-tiny.adapter.v1', 'tensors': 228, 'bytes': 44776600, 'sha256': 'da0e033086b199e1...', 'prompts': ['red blood cell', 'white blood cell', 'platelet']}
+{'reload_parity': {'identical_images': 8, 'of': 8, 'boxes_per_image': [184, 200, 181, 195, 230, 128, 194, 200]}, 'reloaded_best_epoch': 6}
+['grounding_dino_detection_adapter', 'grounding_dino_detection_evaluation_report.json', 'grounding_dino_detection_examples', 'grounding_dino_detection_input_manifest.json', 'grounding_dino_detection_result.json', 'grounding_dino_detection_scene_adapted.png', 'grounding_dino_detection_scene_frozen.png', 'grounding_dino_detection_train.csv']
+[colab] Saving notebook with outputs to '/home/kurt/colab-runs/grounding-dino-detection-pipeline-a2bdaaf-d705a2/grounding_dino_detection_colab_a2bdaaf_colab-cli-t4_output.ipynb'...
