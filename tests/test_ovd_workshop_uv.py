@@ -79,9 +79,11 @@ def test_lock_is_fully_hashed_and_keeps_the_former_pins():
     former = {"torch": "2.14.0", "torchvision": "0.29.0", "torchaudio": "2.11.0", "transformers": "4.57.6",
               "safetensors": "0.8.0", "numpy": "2.1.3", "pillow": "11.3.0", "huggingface-hub": "0.36.2"}
     assert {k: locked[k] for k in former} == former
+    added = {"scipy": "1.18.1"}  # 2026-10-04: needed by the OWLv2 image processor
+    assert {k: locked[k] for k in added} == added
     direct = dict(re.findall(r"^([A-Za-z0-9_.-]+)==(\S+)$",
                              REQUIREMENTS_IN.read_text(encoding="utf-8"), re.M))
-    assert direct == former == load_runner().PINS
+    assert direct == {**former, **added} == load_runner().PINS
 
 
 def test_environment_is_built_hash_locked_wheels_only_and_stages_use_its_interpreter():
@@ -191,3 +193,12 @@ def test_stage_json_round_trips_to_the_kernel_objects_exactly(tmp_path):
     assert prompt_results[-1][2] == predict(None, ["b", "a"])
     assert [floor for floor, _p in sweep] == [0.03, 0.05, 0.10, 0.20]
     assert len(payload["times"]) == 3 and payload["peak_gpu_memory_bytes"] is None
+
+
+def test_scipy_is_pinned_for_the_owlv2_image_processor():
+    # transformers' slow Owlv2ImageProcessor imports SciPy. The 2026-10-04 Colab T4 run of 873e998 failed
+    # without it, because the old in-kernel install got SciPy from the Colab image and never pinned it.
+    assert re.search(r"^scipy==\d", REQUIREMENTS_IN.read_text(encoding="utf-8"), re.M)
+    lock = LOCK.read_text(encoding="utf-8")
+    assert re.search(r"^scipy==\S+ \\\n\s+--hash=sha256:[0-9a-f]{64}", lock, re.M)
+    assert '"scipy":' in RUNNER.read_text(encoding="utf-8")

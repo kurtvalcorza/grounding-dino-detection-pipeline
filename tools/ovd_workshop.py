@@ -70,6 +70,7 @@ PINS = {
     "numpy": "2.1.3",
     "pillow": "11.3.0",
     "huggingface-hub": "0.36.2",
+    "scipy": "1.18.1",
 }
 
 

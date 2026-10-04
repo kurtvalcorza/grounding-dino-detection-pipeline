@@ -8,3 +8,6 @@ safetensors==0.8.0
 numpy==2.1.3
 pillow==11.3.0
 huggingface-hub==0.36.2
+# Added 2026-10-04: transformers' Owlv2ImageProcessor needs SciPy. The former in-kernel install got it from
+# the Colab image, so it was never pinned; the 2026-10-04 Colab T4 run of 873e998 failed without it.
+scipy==1.18.1
