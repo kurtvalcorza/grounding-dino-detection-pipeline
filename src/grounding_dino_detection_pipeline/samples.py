@@ -50,6 +50,13 @@ SAMPLE_SEED = 42
 SAMPLE_DIGEST = "af9390b9803ac37416f0fcc5b59cc1ef0926b9ea42a0c27510eef3f399e32c08"  # dataset_digest over the three default splits together; tests pin it
 MIN_RECORDS = 8
 MAX_RECORDS = 5_000
+# BYOD (review GDD-M3): the notebook selects the epoch on validation and scores and reload-checks the test split, so a
+# split dataset needs at least this many validation and test records besides MIN_RECORDS training records.
+MIN_VAL_RECORDS = 2
+MIN_TEST_RECORDS = 2
+# BYOD archive limits (review GDD-m1), checked from the zip directory / file sizes before anything is decompressed.
+MAX_BYOD_FILES = 10_000
+MAX_BYOD_BYTES = 1_000_000_000
 MAX_BOXES = 300  # per image; the model has 900 queries
 MAX_CATEGORY_CHARS = 32
 _ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")
@@ -629,26 +636,74 @@ def check_split_disjoint(splits: Mapping[str, Sequence[Mapping[str, Any]]]) -> d
     return {name: len(part) for name, part in splits.items()}
 
 
+def drop_duplicate_images(records: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Keep the first record of every decoded image; return the kept records and the ids of the dropped duplicates
+    (review GDD-M3: a caller can report what `split_dataset` would otherwise drop silently)."""
+    seen: set[str] = set()
+    kept, dropped = [], []
+    for record in records:
+        key = image_digest(record["image"])
+        if key in seen:
+            dropped.append(str(record["id"]))
+        else:
+            seen.add(key)
+            kept.append(dict(record))
+    return kept, dropped
+
+
+def _split_counts(n: int, val_fraction: float, test_fraction: float) -> tuple[int, int, int]:
+    n_test = max(1, round(n * test_fraction))
+    n_val = round(n * val_fraction)
+    return n - n_test - n_val, n_val, n_test
+
+
+def split_minimums() -> dict[str, int]:
+    """The smallest record count each split may hold (training, validation, test)."""
+    return {"train": MIN_RECORDS, "validation": MIN_VAL_RECORDS, "test": MIN_TEST_RECORDS}
+
+
+def byod_record_limits(val_fraction: float = 0.15, test_fraction: float = 0.2) -> tuple[int, int]:
+    """Smallest and largest number of distinct images `split_dataset` accepts at these fractions: at least
+    MIN_RECORDS training, MIN_VAL_RECORDS validation and MIN_TEST_RECORDS test records, at most MAX_RECORDS in all."""
+    for n in range(1, MAX_RECORDS + 1):
+        train, val, test = _split_counts(n, val_fraction, test_fraction)
+        if train >= MIN_RECORDS and val >= MIN_VAL_RECORDS and test >= MIN_TEST_RECORDS:
+            return n, MAX_RECORDS
+    raise ValueError("no dataset size gives every split its minimum at these fractions")
+
+
 def split_dataset(
     records: Sequence[Mapping[str, Any]], prompts: Sequence[str], *, val_fraction: float = 0.15, test_fraction: float = 0.2, seed: int = 0
 ) -> dict[str, list[dict[str, Any]]]:
-    """Seeded shuffle of a BYOD dataset into train/validation/test after de-duplicating images."""
+    """Seeded shuffle of a BYOD dataset into train/validation/test after de-duplicating images.
+
+    The split must leave at least MIN_RECORDS training, MIN_VAL_RECORDS validation and MIN_TEST_RECORDS test records;
+    a refusal names the split, its count and the dataset size that works (`byod_record_limits`) before any model runs
+    (review GDD-M3: every split used to need MIN_RECORDS, so 8..49 distinct images were refused with a message that
+    named neither the split nor the real minimum)."""
     if not (0.0 <= val_fraction < 1.0 and 0.0 < test_fraction < 1.0 and val_fraction + test_fraction < 1.0):
         raise ValueError("fractions must satisfy 0 <= val < 1, 0 < test < 1, val + test < 1")
-    checked = validate_dataset(records, prompts)["records"]
-    seen: set[str] = set()
-    unique = []
-    for record in checked:
-        key = image_digest(record["image"])
-        if key not in seen:
-            seen.add(key)
-            unique.append(record)
+    checked = validate_dataset(records, prompts, min_records=1)["records"]
+    unique, dropped = drop_duplicate_images(checked)
     random.Random(seed).shuffle(unique)
     n = len(unique)
-    n_test = max(1, round(n * test_fraction))
-    n_val = round(n * val_fraction)
-    if n - n_test - n_val < 1:
-        raise ValueError(f"{n} distinct images are too few to split into train/validation/test")
+    n_train, n_val, n_test = _split_counts(n, val_fraction, test_fraction)
+    minimums = split_minimums()
+    counts = (("train", n_train), ("validation", n_val), ("test", n_test))
+    short = [(name, have, minimums[name]) for name, have in counts if have < minimums[name]]
+    if short:
+        name, have, least = short[0]
+        try:
+            low, _high = byod_record_limits(val_fraction, test_fraction)
+            sizes = f"a dataset needs at least {low} distinct images"
+        except ValueError:
+            sizes = "no dataset size gives every split its minimum at these fractions"
+        duplicates = f" ({len(dropped)} duplicate image(s) dropped)" if dropped else ""
+        raise ValueError(
+            f"the {name} split would hold {max(have, 0)} records (at least {least} are required): {len(checked)} records, "
+            f"{n} distinct images{duplicates}, split into train/validation/test as {max(n_train, 0)}/{n_val}/{n_test}; "
+            f"{sizes}. Add images"
+        )
     return {"test": unique[:n_test], "validation": unique[n_test : n_test + n_val], "train": unique[n_test + n_val :]}
 
 
@@ -658,15 +713,35 @@ def load_byod_dataset(path: str | Path) -> tuple[list[dict[str, Any]], list[str]
     the order they first appear."""
     source = Path(path)
     members: dict[str, bytes] = {}
+    origin: dict[str, str] = {}
+
+    def check_limits(sizes: Sequence[int]) -> None:
+        # Review GDD-m1: refuse an oversized archive from its directory / file sizes, before anything is decompressed.
+        if len(sizes) > MAX_BYOD_FILES:
+            raise ValueError(f"the BYOD source holds {len(sizes)} files; at most MAX_BYOD_FILES ({MAX_BYOD_FILES}) are read")
+        if sum(sizes) > MAX_BYOD_BYTES:
+            raise ValueError(f"the BYOD source expands to {sum(sizes):,} bytes; at most MAX_BYOD_BYTES ({MAX_BYOD_BYTES:,}) are read")
+
+    def add(name: str, where: str, data: bytes) -> None:
+        # The archive is flattened (no extractall): two files with one base name would overwrite each other (GDD-m1).
+        if name in members:
+            raise ValueError(
+                f"two files are named {name!r} ({origin[name]} and {where}); the BYOD archive is read without its "
+                "folders, so every file name must be unique - rename one"
+            )
+        members[name], origin[name] = data, where
+
     if source.is_dir():
-        for file in sorted(source.rglob("*")):
-            if file.is_file():
-                members[file.name] = file.read_bytes()
+        files = [f for f in sorted(source.rglob("*")) if f.is_file() and "__MACOSX" not in f.parts]
+        check_limits([f.stat().st_size for f in files])
+        for file in files:
+            add(file.name, file.relative_to(source).as_posix(), file.read_bytes())
     elif zipfile.is_zipfile(source):
         with zipfile.ZipFile(source) as archive:
-            for info in archive.infolist():
-                if not info.is_dir():
-                    members[Path(info.filename).name] = archive.read(info)  # flattened; no extractall
+            infos = [i for i in archive.infolist() if not i.is_dir() and not i.filename.startswith("__MACOSX/")]
+            check_limits([i.file_size for i in infos])
+            for info in infos:
+                add(Path(info.filename).name, info.filename, archive.read(info))  # flattened; no extractall
     else:
         raise ValueError(f"{source} is neither a directory nor a zip file")
     if "boxes.csv" not in members:

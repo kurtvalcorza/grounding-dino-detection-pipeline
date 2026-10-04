@@ -1,6 +1,6 @@
 """Static release-asset validation for the Grounding DINO tiny open-vocabulary detection DIMER pipeline.
 
-Checks the STANDALONE tutorial notebook (DIMER Notebook Specification 2.0 §4), the tutorial
+Checks the STANDALONE tutorial notebook (DIMER Notebook Specification 2.2 §4), the tutorial
 registry, model card, README, STATUS.md and weight documentation for source conformance and
 cross-document identity consistency, and runs the generator parity checks (PAR1–PAR3).
 
@@ -50,9 +50,16 @@ CODE_MARKERS = (
     "corpus_files = fetch_corpus(cache_dir='weights/bccd')",
     "corpus = read_corpus(corpus_files)",
     "splits = build_sample_dataset(corpus, seed=SPLIT_SEED)",
-    "records, vocabulary = load_byod_dataset(byod_zip)",
-    "splits = split_dataset(records, vocabulary, seed=SPLIT_SEED)",
-    "dataset_manifests = {name: validate_dataset(part, vocabulary) for name, part in splits.items()}",
+    "records, vocabulary = load_byod_dataset(byod_source)",
+    "splits = split_dataset(unique_records, vocabulary, seed=SPLIT_SEED)",
+    "dataset_manifests = {name: validate_dataset(part, vocabulary, min_records=minimums[name]) for name, part in splits.items()}",
+    # GDD-M3 / GDD-m1: BYOD path field, upload guard, dropped duplicates reported, the real minimum computed and printed
+    "BYOD_PATH = ''",
+    "if len(uploaded) != 1:",
+    "unique_records, dropped_duplicates = drop_duplicate_images(records)",
+    "'needed': f'at least {byod_record_limits()[0]} distinct images'",
+    "minimums = split_minimums()",
+    "print({'byod_minimum_distinct_images': byod_record_limits()[0], 'split_minimums': minimums})",
     "disjoint = check_split_disjoint(splits)",
     "write_dataset_csv(train_records, 'outputs/grounding_dino_detection_train.csv')",
     "validate_dataset(probe, vocabulary)",
@@ -62,23 +69,34 @@ CODE_MARKERS = (
     "result = pipeline.detect(scene, scene_prompts, box_threshold=BOX_THRESHOLD, text_threshold=TEXT_THRESHOLD)",
     "report = evaluation_report(result, scene_boxes, sample_kind=",
     "baseline_grid = grid_prior_baseline(train_records, test_records, vocabulary)",
-    "generic_boxes = [pipe.predict_boxes(r['image'], ['cell']) for r in test_records]",
+    # GDD-m2: the generic-prompt word is a form field, not a hard-coded class name
+    "GENERIC_PROMPT = ''",
+    "generic_prompt = GENERIC_PROMPT.strip() or ('object' if USE_BYOD else 'cell')",
+    "generic_boxes = [pipe.predict_boxes(r['image'], [generic_prompt]) for r in test_records]",
     "baseline_generic = majority_relabel_baseline(generic_boxes, train_records, test_records, vocabulary)",
     "frozen_test = pipe.evaluate(test_records, vocabulary)",
-    "assert frozen_test['map50'] > baseline_grid['map50']",
+    # GDD-m2: the comparisons are recorded, not asserted
+    "frozen_beats_grid_prior = frozen_test['map50'] > baseline_grid['map50']",
+    # GDD-M2: Sections 5-7 start from the pretrained model; Section 6 refuses an adapted one
+    "def reset_to_pretrained():",
+    "    pipe = GroundingDINOPipeline.from_pretrained(weights_dir=WEIGHTS_DIR)",
+    "if frozen_test['adapted']:",
     "adapt_result = pipe.adapt(train_records, val_records, vocabulary, epochs=EPOCHS, lr=LEARNING_RATE, batch_size=BATCH_SIZE, progress=report)",
     "adapted_test = pipe.evaluate(test_records, vocabulary)",
     "adapted_val = pipe.evaluate(val_records, vocabulary)",
-    "assert adapted_test['map50'] > frozen_test['map50']",
+    "adapted_beats_frozen = comparison['delta_vs_frozen']['map50'] > 0",
+    "'outcomes': outcomes,",
+    "print('Reading: ' + reading)",
+    "run_history = globals().get('run_history', [])",
     "adapted_scene_result, adapted_scene = detect_scene(pipe, 'adapted')",
     "frozen_base = GroundingDINOPipeline.from_pretrained(weights_dir=WEIGHTS_DIR, device=pipe.device)",
     "pipe.save_artifact(artifact_dir, metadata={'tutorial': 'grounding_dino_detection', 'data_source': data_source})",
     "reloaded = GroundingDINOPipeline.from_artifact(artifact_dir, weights_dir=WEIGHTS_DIR, device=pipe.device)",
-    "assert parity['identical_images'] == parity['of']",
+    "raise RuntimeError(f'Reload parity failed: {parity}.",
     "'model_revision': MODEL_REVISION",
     "'model_license': MODEL_LICENSE",
     "'weight_file': WEIGHT_FILE, 'weight_format': 'safetensors, digest-verified', 'weight_sha256': pipe.weight_sha256",
-    "'corpus': {'name': CORPUS_NAME, 'repo': CORPUS_REPO, 'commit': CORPUS_COMMIT, 'license': CORPUS_LICENSE, 'base_url': CORPUS_BASE_URL, 'bytes': CORPUS_BYTES, 'pinned_images': CORPUS_IMAGES, 'pinned_boxes': CORPUS_BOXES",
+    "'corpus': None if USE_BYOD else {'name': CORPUS_NAME, 'repo': CORPUS_REPO, 'commit': CORPUS_COMMIT, 'license': CORPUS_LICENSE, 'base_url': CORPUS_BASE_URL, 'bytes': CORPUS_BYTES, 'pinned_images': CORPUS_IMAGES, 'pinned_boxes': CORPUS_BOXES",
     "transformers.__version__",
     "'device': pipe.device",
 )
@@ -106,6 +124,47 @@ MARKDOWN_MARKERS = (
     "## 9. Look at the boxes, export the adapter and reload it",
     "**Vocabulary:**",
     "**Leakage:**",
+    "**What the split does and does not protect against.**",
+    # GDD-m3: the run-to-run spread is stated and the worked answers quote the recorded T4 run
+    "**Run-to-run spread.**",
+    "**0.570, 0.608 and 0.632**",
+    "0.109 → 0.632 and mAP75 0.052 → 0.450",
+    # GDD-m4: the notebook builds its own Python 3.12.12 environment whatever the kernel runs
+    "Section 1 builds its own **Python 3.12.12** environment",
+    # GDD-M3: the stated BYOD minimum (computed by byod_record_limits; a test ties the two together)
+    "**at least 12 distinct images**",
+)
+# Learner-facing text the review fixes removed; it must not come back (GDD-M1 restart/install text, GDD-M3 the wrong
+# BYOD minimum, GDD-m2 the asserted gain, GDD-m3 the other run's quoted numbers, GDD-m4 the stale runtime statement).
+STALE_MARKDOWN = (
+    "its restart",
+    "Restart the runtime, then rerun",
+    "installs the pinned dependencies",
+    "at least eight images",
+    "a dataset needs 8..5,000 records",
+    "The cell asserts",
+    "re-run from that cell",
+    "the build record measured 0.109 → 0.570",
+    "to about 0.64",
+    "Google Colab or Kaggle GPU, Python 3.12)",
+    "without leakage",
+)
+# The guided layer (NOTEBOOK_SPEC 2.2 §3.5, GDL1-GDL15; review GDD-M4): each marker with its minimum count.
+GUIDED_MARKERS = (
+    ("**Who this is for.**", 1),
+    ("**Input → Model → Output.**", 1),
+    ("**How to use this notebook.**", 1),
+    ("**Roadmap:**", 1),
+    ("**Predict before running:**", 6),
+    ("**What to notice:**", 6),
+    ("<summary>Check your reasoning</summary>", 7),
+    ("## 10. Your turn — change one thing", 1),
+    ("**Predict → Change one thing → Run → Observe → Explain**", 1),
+    ("## Troubleshooting", 1),
+    ("## Glossary", 1),
+    ("## Conclusion (your notes)", 1),
+    ("> **Infrastructure.**", 3),
+    ("**Optional experiments", 1),
 )
 # Direct-library use that must stay inside the carried module cells (G2: the notebook calls the
 # pipeline API, it does not reimplement it). Checked on every code cell except the embedded ones
@@ -135,10 +194,10 @@ INSTALL_CELL_MARKER = "subprocess.run([sys.executable, '-m', 'pip', 'install', '
 # ---------------------------------------------------------------------------
 # Shared checks. Everything below is source/structure validation only. Passing
 # these checks is NOT clean-runtime execution evidence under DIMER Notebook
-# Specification 2.0; see docs/release-verification.md for the release gate.
+# Specification 2.2; see docs/release-verification.md for the release gate.
 # ---------------------------------------------------------------------------
 
-NOTEBOOK_SPEC = "2.0"
+NOTEBOOK_SPEC = "2.2"
 ALLOWED_PROFILES = {"E2E", "ARTIFACT-INFERENCE", "TASK-INFERENCE", "MULTI-CAPABILITY", "SMOKE"}
 STATUS_TOKENS = ("Candidate", "Release-grade")
 PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b|Insert text here|Tooltip:", re.I)
@@ -574,8 +633,13 @@ def _validate_embedded_modules(path: Path, notebook: dict, build) -> list[int]:
             cell["metadata"]["dimer"].get("module_sha256") == context["per_module_sha256"][rel],
             f"{path.name}: cell {index} module_sha256 tag does not match {rel}",
         )
+        # GDD-M4: the carried cell is the module plus the generator's one Infrastructure title line, collapsed.
         _check(
-            _cell_source(cell).rstrip("\n") + "\n" == context["embedded"][module],
+            _cell_source(cell).startswith(build.CARRIED_TITLE_PREFIX) and cell.get("metadata", {}).get("cellView") == "form",
+            f"{path.name}: carried module cell {index} must start with the generator's Infrastructure title and be collapsed (cellView: form)",
+        )
+        _check(
+            build.strip_carried_title(_cell_source(cell)).rstrip("\n") + "\n" == context["embedded"][module],
             f"{path.name}: embedded module cell {index} differs from {rel} (PAR1); regenerate the notebook",
         )
     return [index for index, _ in tagged]
@@ -632,7 +696,7 @@ def _validate_bootstrap_guard(path: Path, code_cells: list[tuple[int, str, ast.M
 
 
 def _validate_notebook_content(
-    path: Path, code_cells: list[tuple[int, str, ast.Module]], markdown: str, embedded: list[int]
+    path: Path, code_cells: list[tuple[int, str, ast.Module]], markdown: str, embedded: list[int], notebook: dict
 ) -> None:
     model_id, _revision = _package_identity()
     stripped = {index: _strip_comments(source) for index, source, _ in code_cells}
@@ -642,11 +706,33 @@ def _validate_notebook_content(
     _check(not missing, f"{path.name}: missing required source markers: {missing}")
     present = [label for label, pattern in FORBIDDEN_PATTERNS if pattern.search(code)]
     _check(not present, f"{path.name}: forbidden/insecure source: {present}")
-    outside_stage_cells = "\n".join(
-        text for index, text in stripped.items() if index not in embedded and INSTALL_CELL_MARKER not in text
+    # GDD-M1: the kernel install cell downloads the pinned uv wheel and verifies its size and SHA-256; with the
+    # generator's runtime-record cell (pip install guard, skipped in the isolated worker) it is the only cell outside
+    # the carried modules allowed to use urllib.request / the pinned-install markers.
+    kernel = {index for index, source, _tree in code_cells if "# dimer: kernel cell" in source}
+    learner = "\n".join(
+        text for index, text in stripped.items() if index not in embedded and index not in kernel and INSTALL_CELL_MARKER not in text
     )
-    leaked = [marker for marker in FORBIDDEN_OUTSIDE_MODULE if marker in outside_stage_cells]
+    kernel_raw = [source for index, source, _tree in code_cells if index in kernel]
+    leaked = [marker for marker in FORBIDDEN_OUTSIDE_MODULE if marker in learner]
+    leaked += [m for m in FORBIDDEN_OUTSIDE_MODULE if m != "urllib.request" and any(m in _strip_comments(k) for k in kernel_raw)]
     _check(not leaked, f"{path.name}: direct library use outside the carried module cell (G2): {leaked}")
+    _check(len(kernel) == 2, f"{path.name}: exactly two kernel cells (isolated install and router) are expected (GDD-M1)")
+    install = next((k for k in kernel_raw if "LOCK_TEXT = r" in k), "")
+    for needed in ('"--managed-python"', '"--require-hashes"', '"--only-binary"', '":all:"', "UV_SHA256", "LOCK_SHA256", 'platform.machine() != "x86_64"'):
+        _check(needed in install, f"{path.name}: the isolated install cell must use {needed} (GDD-M1)")
+    _check("_ip.input_transformers_cleanup.append(_route_to_isolated_runtime)" in "\n".join(kernel_raw), f"{path.name}: later cells must be routed to the isolated environment (GDD-M1)")
+    _check("module.__spec__ = importlib.machinery.ModuleSpec(name, None, is_package=package)" in "\n".join(kernel_raw), f"{path.name}: the worker's google.colab stubs must carry a module spec")
+    stale = [marker for marker in STALE_MARKDOWN if marker in markdown]
+    _check(not stale, f"{path.name}: stale learner-facing text: {stale}")
+    _check("{{" not in markdown and "}}" not in markdown, f"{path.name}: markdown must not show doubled braces")
+    _check("\nassert " not in "\n" + learner, f"{path.name}: learner cells must not use a bare assert (GDD-m2)")
+    short = [(marker, markdown.count(marker), least) for marker, least in GUIDED_MARKERS if markdown.count(marker) < max(least, 1)]
+    _check(not short, f"{path.name}: guided layer incomplete (marker, found, needed): {short}")
+    # GDL11 (GDD-M4): every setup cell (install, router, runtime record, carried modules, model) is collapsed and titled.
+    setup = [cell for cell in notebook["cells"] if cell["cell_type"] == "code"][: 3 + len(embedded) + 1]
+    _check(all(cell.get("metadata", {}).get("cellView") == "form" for cell in setup), f"{path.name}: Sections 1-3 code cells must be collapsed (cellView: form) (GDD-M4)")
+    _check(all("".join(cell["source"]).startswith("# @title Infrastructure: ") for cell in setup), f"{path.name}: Sections 1-3 code cells must be titled '# @title Infrastructure: ...' (GDD-M4)")
     _check(
         f"pipe = {MODEL_LOAD_EXPR}" in outside,
         f"{path.name}: must load through {MODEL_LOAD_EXPR} (INF1)",
@@ -680,7 +766,7 @@ def validate_notebooks() -> None:
     _model_id, revision = _package_identity()
     _validate_identity(path, code_cells, embedded, revision)
     _validate_parity(path, notebook, code_cells, build)
-    _validate_notebook_content(path, code_cells, markdown, embedded)
+    _validate_notebook_content(path, code_cells, markdown, embedded, notebook)
     registry = _read(tutorials / "README.md")
     _check(f"`{path.name}`" in registry, f"{path.name} missing from tutorials/README.md")
     _check(

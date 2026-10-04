@@ -558,8 +558,17 @@ class GroundingDINOPipeline:
         feature enhancer and the query selection stay frozen. AdamW (no weight decay), gradient clipping at `GRAD_CLIP`,
         seeded shuffling, no scheduler, no augmentation. Epoch 0 records the frozen model's validation metrics; the epoch
         with the highest validation mAP50 is kept (the final one without a validation split). On any exception the
-        frozen weights are restored."""
+        frozen weights are restored.
+
+        An already adapted pipeline (or one with a loaded artifact) is refused: training would continue from the adapted
+        weights and record them as the "frozen model" at epoch 0 (review GDD-M2). Build a fresh pipeline with
+        `from_pretrained()` first."""
         model, processor = self._require_model()  # refuse before importing torch
+        if self.adapter is not None:
+            raise ValueError(
+                "this pipeline is already adapted; adapt() starts from the pretrained base, so build a fresh "
+                "pipeline with from_pretrained() first"
+            )
         import torch
 
         from .samples import validate_dataset
