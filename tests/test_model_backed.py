@@ -44,8 +44,9 @@ def records():
     return [_record(i) for i in range(16)]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def pipe():
+    # Function scope: adapt() refuses an already adapted pipeline (review GDD-M2), so every test starts from the base.
     return GroundingDINOPipeline.from_pretrained(device="cpu", weights_dir=DEFAULT_WEIGHTS_DIR)
 
 
