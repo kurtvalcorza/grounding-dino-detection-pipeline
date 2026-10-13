@@ -48,6 +48,8 @@ RUN_THRESHOLD_SWEEP = False
 PROMPT_VARIANTS = {}
 PROMPT_VARIANT_TO_CANONICAL = {}
 REORDERED_PROMPTS = ["platelet", "red blood cell", "white blood cell"]
+# Lowest score kept by the extra, untimed candidate pass (floor-sensitivity table in the notebook).
+CANDIDATE_FLOOR = 0.001
 
 MAX_PROMPTS = 16
 MAX_PROMPT_CHARS = 48
@@ -93,6 +95,7 @@ def configure(job):
     global EVAL_SCORE_FLOOR, GDINO_BOX_THRESHOLD, GDINO_TEXT_THRESHOLD, OWLV2_THRESHOLD
     global RUN_PROMPT_EXPERIMENT, RUN_THRESHOLD_SWEEP, PROMPT_VARIANTS, PROMPT_VARIANT_TO_CANONICAL
     global REORDERED_PROMPTS, GDINO_DIR, OWLV2_DIR, GDINO_REVISION, OWLV2_REVISION
+    global CANDIDATE_FLOOR
     settings = job.get("settings", {})
     EVAL_SCORE_FLOOR = float(settings.get("eval_score_floor", EVAL_SCORE_FLOOR))
     GDINO_BOX_THRESHOLD = float(settings.get("gdino_box_threshold", GDINO_BOX_THRESHOLD))
@@ -103,6 +106,7 @@ def configure(job):
     PROMPT_VARIANTS = settings.get("prompt_variants", PROMPT_VARIANTS)
     PROMPT_VARIANT_TO_CANONICAL = settings.get("prompt_variant_to_canonical", PROMPT_VARIANT_TO_CANONICAL)
     REORDERED_PROMPTS = settings.get("reordered_prompts", REORDERED_PROMPTS)
+    CANDIDATE_FLOOR = float(settings.get("candidate_floor", CANDIDATE_FLOOR))
     if "gdino" in job:
         GDINO_DIR = Path(job["gdino"]["dir"])
         GDINO_REVISION = job["gdino"]["manifest"]["revision"]
@@ -476,12 +480,21 @@ def run_model(name, predict, test_records, prompt_records, canonical_prompts, vi
             reordered = predict(record["image"], REORDERED_PROMPTS)
             prompt_results.append(("order_canonical", record["id"], canonical_order))
             prompt_results.append(("order_reordered", record["id"], reordered))
+            # Control: the identical canonical prompt once more. If even this differs, an order
+            # difference cannot be attributed to the order.
+            prompt_results.append(("order_canonical_repeat", record["id"],
+                                   predict(record["image"], canonical_prompts)))
 
     threshold_sweep = []
     if RUN_THRESHOLD_SWEEP:
         for floor in (0.03, 0.05, 0.10, 0.20):
             preds = [predict(r["image"], canonical_prompts, floor) for r in prompt_records]
             threshold_sweep.append((floor, preds))
+
+    # Floor-sensitivity cache: every test-image candidate down to CANDIDATE_FLOOR, in one extra pass after
+    # all the passes above (untimed). The notebook filters it at higher floors and checks that the
+    # EVAL_SCORE_FLOOR filter reproduces `predictions` exactly.
+    candidates = [predict(r["image"], canonical_prompts, CANDIDATE_FLOOR) for r in test_records]
 
     return {
         "predictions": predictions,
@@ -490,6 +503,8 @@ def run_model(name, predict, test_records, prompt_records, canonical_prompts, vi
         "visual_predictions": visual_predictions,
         "prompt_results": prompt_results,
         "threshold_sweep": threshold_sweep,
+        "candidates": candidates,
+        "candidate_floor": CANDIDATE_FLOOR,
     }
 
 
@@ -614,11 +629,7 @@ def stage_owlv2(job):
 
 def stage_byod(job):
     load_libraries()
-    try:
-        records = load_images(job["images"])
-    except RuntimeError as error:
-        # The file changed after the BYOD cell checked it: the input is refused, the stage is not broken.
-        raise InputRefused(f"{error}; the file changed after the BYOD cell checked it") from None
+    records = load_images(job["images"])
     gd, owl = predict_byod(records, job["prompts"])
     return {"grounding_dino": gd, "owlv2": owl}
 

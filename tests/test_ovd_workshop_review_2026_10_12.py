@@ -8,8 +8,10 @@ import os
 import re
 import subprocess
 import sys
+import types
 from pathlib import Path
 
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -89,14 +91,16 @@ def test_stage_main_turns_byod_refusal_into_one_line_and_exit_65(tmp_path, capsy
         runner.main(["--stage", "gdino", "--job", str(job), "--out", str(tmp_path / "out.json")])
 
 
-def test_stage_byod_refuses_changed_pixels(tmp_path):
+def test_stage_byod_keeps_pixel_mismatch_an_integrity_error(tmp_path):
+    # CX10: a decoded-pixel mismatch is reported as an integrity error, not as an ordinary input refusal.
     runner = load_runner()
     runner.load_libraries = lambda: None
     path = tmp_path / "a.png"
     Image.new("RGB", (8, 8)).save(path)
-    with pytest.raises(runner.InputRefused, match="a: decoded pixels differ"):
+    with pytest.raises(RuntimeError, match="a: decoded pixels differ") as error:
         image = {"id": "a", "path": str(path), "pixel_sha256": "0" * 64}
         runner.stage_byod({"images": [image], "prompts": ["x"]})
+    assert not isinstance(error.value, runner.InputRefused) and "changed" not in str(error.value)
 
 
 def test_byod_token_limit_is_an_input_refusal():
@@ -244,10 +248,120 @@ def test_opening_states_download_size_and_labelled_runtime():
 
 def test_learner_text_names_naming_floor_labels_and_baseline():
     md = MARKDOWN.lower()
-    assert "labelled `white blood cell`" in md and "naming, not finding" in md
+    assert "labelled `white blood cell` overlap annotated red blood cells" in md
+    assert "these boxes do not count as red-blood-cell detections" in md
+    assert "naming, not finding" not in md and "rank boxes better" not in md and "ranking quality" not in md
+    assert "localization, phrase assignment and ranking jointly" in md
     assert "grounding dino evaluator's score floor" in md and "fixed recipe" in md
     assert "reference boxes are incomplete" in md and "not *no object*" in md
+    assert "recall describes annotated objects only" in md and "do not lower it" not in md
+    assert "understate both models" not in md and "class is absent" not in md
+    assert "no annotated support" in md
+    assert "small paired case study" in md and "cannot measure a wording effect" not in md
+    assert "**maximum** over the scores of that phrase's tokens" in md
+    assert "necessary but not sufficient" in md and "how the pairs are built" in md
+    assert "externally reported observation" in md
     assert "grid prior's recall50" in md
     assert "not re-run in this notebook" in md  # reviewer measurements are labelled (REL13)
-    assert "different object sets" in CELL_BY_ID["6c2fade4"] and "phrase" in CELL_BY_ID["96b3745f"]
+    pairs_md = CELL_BY_ID["6c2fade4"]
+    assert "cover different objects" in pairs_md and "common reference support" in pairs_md
+    assert "phrase" in CELL_BY_ID["96b3745f"] and "common_support" in CELL_BY_ID["96b3745f"]
     assert "unzip" in CELL_BY_ID["24bffb83"] and "Refused:" in CELL_BY_ID["24bffb83"]
+
+
+# --------------------------------------------------------------------------- CX1: floor sensitivity
+
+
+def floor_ns(tmp_path, gd_cand, owl_cand, floor=0.05):
+    ns = helpers(tmp_path)
+    recs = [dict(record([[0, 0, 10, 10], [20, 20, 30, 30]], ["red blood cell", "red blood cell"]), id="a")]
+    ns.update(canonical_prompts=list(CANONICAL), test_records=recs, EVAL_SCORE_FLOOR=floor,
+              FLOOR_SENSITIVITY_FLOORS=(0.05, 0.01, 0.001), CANDIDATE_FLOOR=0.001,
+              gdino_candidates=gd_cand, owlv2_candidates=owl_cand)
+    keep_g = [[d for d in p if d[0] >= floor] for p in gd_cand]
+    keep_o = [[d for d in p if d[0] > floor] for p in owl_cand]
+    ns.update(gdino_predictions=keep_g, owlv2_predictions=keep_o,
+              gdino_metrics=ns["detection_metrics"](keep_g, recs, CANONICAL),
+              owlv2_metrics=ns["detection_metrics"](keep_o, recs, CANONICAL))
+    return ns
+
+
+GD = [[(0.9, "red blood cell", [0, 0, 10, 10]), (0.05, "white blood cell", [40, 40, 50, 50]),
+       (0.02, "red blood cell", [20, 20, 30, 30])]]
+OWL = [[(0.5, "white blood cell", [0, 0, 10, 10]), (0.05, "red blood cell", [20, 20, 30, 30]),
+        (0.002, "red blood cell", [0, 0, 10, 10])]]
+
+
+def test_floor_table_reproduces_recipe_and_uses_each_adapters_rule(tmp_path):
+    ns = floor_ns(tmp_path, GD, OWL)
+    exec(CELL_BY_ID["floor-sensitivity"], ns)
+    rows = {(r["model"], r["score_floor"], r["prompt"]): r for r in ns["floor_sensitivity_rows"]}
+    # Grounding DINO keeps score >= floor (its 0.05 box is kept); OWLv2 keeps score > floor (dropped).
+    assert rows[("Grounding DINO Tiny", 0.05, "all")]["n_predictions"] == 2
+    assert rows[("OWLv2 Base/16 Ensemble", 0.05, "all")]["n_predictions"] == 1
+    assert rows[("Grounding DINO Tiny", 0.05, "red blood cell")]["recall50"] == 0.5
+    assert rows[("Grounding DINO Tiny", 0.01, "red blood cell")]["recall50"] == 1.0
+    assert rows[("OWLv2 Base/16 Ensemble", 0.001, "red blood cell")]["recall50"] == 1.0
+    assert [r["operating_recipe"] for r in ns["floor_sensitivity_rows"]].count(True) == 8  # 2 models x 4 rows
+
+
+def test_floor_table_refuses_a_cache_that_does_not_reproduce_the_recipe(tmp_path):
+    ns = floor_ns(tmp_path, GD, OWL)
+    ns["gdino_predictions"] = [GD[0][:1]]  # differs from the cache filtered at 0.05
+    with pytest.raises(RuntimeError, match="differ from the canonical predictions"):
+        exec(CELL_BY_ID["floor-sensitivity"], ns)
+
+
+def test_floor_filter_compares_in_float32(tmp_path):
+    ns = floor_ns(tmp_path, GD, OWL)
+    exec(CELL_BY_ID["floor-sensitivity"], ns)
+    f32 = float(np.float32(0.05))  # 0.05000000074505806, the value torch compares against
+    assert ns["filter_floor"]([[(f32, "x", [0, 0, 1, 1])]], 0.05, np.greater) == [[]]
+    assert ns["filter_floor"]([[(f32, "x", [0, 0, 1, 1])]], 0.05, np.greater_equal) != [[]]
+
+
+def test_stage_caches_candidates_and_runs_a_repeat_control():
+    runner = load_runner()
+    runner.torch = types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: False))
+    runner.configure({"settings": {"candidate_floor": 0.001, "eval_score_floor": 0.05,
+                                   "prompt_variants": {"canonical": ["a"]},
+                                   "prompt_variant_to_canonical": {"canonical": {"a": "a"}}}})
+    calls = []
+
+    def predict(image, prompts, floor=None):
+        floor = runner.EVAL_SCORE_FLOOR if floor is None else floor
+        calls.append(floor)
+        return [d for d in [(0.5, "a", [0, 0, 1, 1]), (0.01, "a", [0, 0, 2, 2])] if d[0] >= floor]
+
+    recs = [{"id": "r", "image": None}]
+    out = runner.run_model("m", predict, recs, recs, ["a"], lambda image, prompts: [])
+    assert out["candidate_floor"] == 0.001
+    assert out["candidates"] == [[(0.5, "a", [0, 0, 1, 1]), (0.01, "a", [0, 0, 2, 2])]]
+    assert out["predictions"] == [[(0.5, "a", [0, 0, 1, 1])]]
+    assert [v for v, _i, _p in out["prompt_results"]] == ["canonical", "order_canonical", "order_reordered",
+                                                         "order_canonical_repeat"]
+    assert calls[-1] == 0.001  # the candidate pass runs last, after every timed and experiment pass
+
+
+def test_prompt_summary_reports_paired_differences(tmp_path):
+    ns = confusion_ns(tmp_path)
+    a = dict(record([[0, 0, 10, 10]], ["red blood cell"]), id="a")
+    hit = [(0.9, "red blood cell", [0, 0, 10, 10])]
+    rows = [("canonical", "a", hit), ("article", "a", [])]
+    ns.update(prompt_experiment_records=[a], RUN_PROMPT_EXPERIMENT=True, gdino_prompt_results=rows,
+              owlv2_prompt_results=rows)
+    exec(CELL_BY_ID["1c25de4f"], ns)
+    article = [r for r in ns["prompt_summary_rows"]
+               if r["prompt_set"] == "article" and r["prompt"] == "red blood cell"]
+    assert article[0]["delta_true_positives_vs_canonical"] == -1 and article[0]["recall50"] == 0.0
+    absent = [r for r in ns["prompt_summary_rows"] if r["prompt"] == "platelet"][0]
+    assert absent["recall50"] is None  # no annotated support
+    assert set(ns["PROMPT_SUMMARY_FIELDS"]) == set(article[0])
+
+
+def test_experiment_evidence_is_exported():
+    src = CELL_BY_ID["1b4955b0"]
+    for name in ("floor_sensitivity.csv", "prompt_summary.csv", "prompt_variant_detections.csv",
+                 "prompt_experiment_config.json"):
+        assert name in src and name in CELL_BY_ID["9b0eafd9"]
+    assert "variant_to_canonical" in src and "reordered_prompts" in src and "THRESHOLD_SWEEP_FLOORS" in src

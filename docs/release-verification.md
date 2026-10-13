@@ -330,25 +330,29 @@ status is retained.
 
 - **GDN2-M1:** Section 16 now prints, for each model, where its boxes landed (phrase given × phrase of the
   best-overlapping reference at IoU 0.50) and how many objects of each class received a box when the phrase is
-  ignored (display only). Sections 13, 14 and 25 explain that OWLv2's zero red-blood-cell AP is a naming result
-  (its boxes on red cells are labelled `white blood cell`), label `EVAL_SCORE_FLOOR` as the Grounding DINO
-  evaluator's floor reused as a fixed recipe, and state that recall50 depends on the floor for Grounding DINO
-  much more than for OWLv2, quoting the reviewer's CPU measurement with its source (REL13).
-- **GDN2-M2:** Sections 6, 16, 22 and 25 name BCCD's incomplete red-cell annotations, say that they bias AP,
-  precision and spurious counts but not recall, and define *spurious* as "no reference box". Section 16 prints
-  how many images have no red-blood-cell box.
+  ignored (display only, supplementary). Sections 13, 14 and 25 state that, under this prompt set, winning-label
+  policy and score floor, some OWLv2 boxes labelled `white blood cell` overlap annotated red blood cells and do not
+  count as red-blood-cell detections, and that phrase-level AP measures localization, phrase assignment and
+  ranking jointly; `EVAL_SCORE_FLOOR` is labelled as the Grounding DINO evaluator's floor reused as a fixed recipe.
+  The floor dependence is now measured in the notebook (follow-up below); the reviewer's earlier CPU figures are
+  kept only as an externally reported observation.
+- **GDN2-M2:** Sections 6, 16, 22 and 25 name BCCD's incomplete red-cell annotations: correct detections of
+  unannotated objects can be counted as false positives, recall describes annotated objects only, neither metric
+  establishes performance over all visible cells, and omissions may affect the models differently. *Spurious* is
+  defined as "no reference box". Section 16 prints how many images have no annotated red-cell support.
 - **GDN2-M3:** the prompt-wording cell sums every prompt-experiment image with the one-to-one assignment (boxes,
   true positives, recall50, duplicates, wrong-phrase boxes per model, prompt set and phrase) instead of printing
-  only the first image; Sections 17, 18 and 25 state that four images (and one for the order test) are examples,
-  not a measured effect, and why OWLv2's rows are nearly empty. `prompt_sensitivity.csv` is unchanged.
+  only the first image; Sections 17, 18 and 25 describe it as a small paired case study of prompt-set sensitivity
+  (four images; one for the order test) and explain why OWLv2's rows are nearly empty. `prompt_sensitivity.csv`
+  is unchanged.
 - **Minors:** `run_stage` no longer reprints the child log after streaming it (m1); BYOD input refusals are one
   `Refused:` line naming the file or `boxes.csv` line, without a traceback, from the kernel (`BYODInputRefused`) and
-  from the byod stage (`InputRefused`, exit 65; `run_stage` returns `None`), while genuine failures still raise
-  (m2); `metadata.dimer.notebook_profile` (renamed from `profile`) and `notebook_kind` are declared (m3);
+  from the byod stage (`InputRefused`, exit 65, token limits only; `run_stage` returns `None`), while genuine
+  failures, including a decoded-pixel integrity mismatch, still raise (m2); `metadata.dimer.notebook_profile` (renamed from `profile`) and `notebook_kind` are declared (m3);
   `OUTPUT_DIR` is a form field and the rerun guidance matches the per-process design (m4); the opening states
   download size and the measured T4 time of the previous revision, labelled (m5); the confidence-versus-
   localization cell prints per-phrase summaries and warns that the pair sets differ (m6); the baseline is
-  interpreted, including that the grid prior out-recalls OWLv2 (m7); Section 24 gives the Colab/Kaggle route for
+  interpreted, including that the grid prior out-recalls OWLv2 (m7, wording corrected in the follow-up); Section 24 gives the Colab/Kaggle route for
   a BYOD folder (m8).
 
 Default path: every code cell is AST-identical except the five declared ones (the runtime cell's failure path, the
@@ -360,6 +364,41 @@ on the pinned BCCD sample with the reviewer's stored CPU predictions of the pinn
 are an unchanged prefix of the new ones and the exported prompt rows are identical. That is not clean-runtime
 evidence. A hosted default run of the new blob, a browser run with `RUN_THRESHOLD_SWEEP=True` and a real-model
 BYOD run (one valid, one refused input) are pending. Status stays **Candidate**.
+
+### Peer-review follow-up — 2026-10-13 (GDN2-CX1 = A, CX2..CX10)
+
+A Codex peer review of PR #13, verified by the orchestrator, and the maintainer's decision GDN2-CX1 = A. Blob
+`8cd471bb` → `cb532ab5`; cells `floor-sensitivity-md` and `floor-sensitivity` added after the Section 14 table.
+
+- **CX1 (decision A):** each model stage runs one extra, untimed pass over the 94 test images that keeps every
+  candidate down to `CANDIDATE_FLOOR` (0.001; the lowest of `FLOOR_SENSITIVITY_FLOORS`), after all other passes.
+  The new cell filters the cache with each adapter's own rule in float32 (Grounding DINO `>=`, OWLv2 `>` as in the
+  upstream post-processing), raises if the `EVAL_SCORE_FLOOR` filter differs from the canonical predictions or
+  per-phrase metrics, prints AP50/recall50 per model, floor and phrase, and exports `floor_sensitivity.csv`. The
+  0.05 table stays the labelled operating recipe.
+- **CX2–CX7:** wording corrected (annotation-relative measurements; "no annotated support"; AP measures
+  localization, phrase assignment and ranking jointly; the mAP gap over the grid prior does not isolate ranking,
+  and the grid's equal scores make its AP depend on tie order; Grounding DINO's max-over-tokens phrase reducer
+  explained; the prompt experiment is a paired case study with paired differences `dTP`/`dboxes`; the
+  confidence/localization pairs' construction stated and localization compared on common reference support).
+- **CX8:** the order experiment runs an identical-prompt repeat control; a changed set is necessary but not
+  sufficient.
+- **CX9:** `prompt_summary.csv`, `prompt_variant_detections.csv` and `prompt_experiment_config.json` (image ids,
+  variants, alias mappings, reordered prompts, order control, sweep floors, floor-sensitivity settings) exported.
+- **CX10:** `stage_byod` is restored to the reviewed code: a decoded-pixel mismatch is an integrity error naming
+  the image, not an input refusal.
+
+Default path: every stage function is AST-identical to the PR head except `configure` and `run_model`, which equal
+it once the candidate pass, the repeat control and their keys are removed; `stage_byod` equals the reviewed
+`f8c4f0f` version. Every code cell is AST-identical, or identical after removing the declared additions, except the
+prompt cell (printed view; exported rows unchanged) and the display/control appends.
+
+CPU check with the pinned weights (fixer machine, torch 2.14.0+cpu, transformers 4.57.6, SciPy 1.18.1; the new
+`run_model` executed in-process on the 94 test images; not hosted evidence): the cached candidates filtered at 0.05 reproduced the canonical predictions and per-phrase metrics exactly (the cell's assertions passed; Grounding DINO 0.1088 / 0.2919 / 5,171 and OWLv2 0.0537 / 0.0680 / 1,506 at 0.05, equal to the reviewer's CPU run). mAP50 / recall50 at floors 0.05, 0.02, 0.01, 0.005, 0.001: Grounding DINO 0.1088 / 0.292, 0.1171 / 0.478, 0.1198 / 0.575, 0.1211 / 0.653, 0.1222 / 0.756 (81,901 candidates at 0.001); OWLv2 0.0537 / 0.068, 0.0545 / 0.071, 0.0546 / 0.072, 0.0546 / 0.073, 0.0550 / 0.082 (16,981 candidates). AP50 levels off for both models while Grounding DINO's recall keeps rising, mostly on red blood cells (recall50 0.263 to 0.784); OWLv2's red-blood-cell AP50 stays 0.000. The identical-prompt repeat control gave identical sets for both models. CPU wall time of the whole new run_model: 1,108 s (Grounding DINO) and 1,132 s (OWLv2).
+
+A hosted default run of the new blob is pending; its 0.05 metrics should equal the 2026-10-04 Colab CLI run of
+`f5097fd`, and the notebook itself now asserts that the cached candidates reproduce them. Status stays
+**Candidate**.
 
 ## 2026-10-04 review fixes (GDD-M1..M4, GDD-m1..m4)
 
