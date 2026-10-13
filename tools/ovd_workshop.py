@@ -59,6 +59,20 @@ GDINO_SPECIAL_TOKEN_IDS = (101, 102, 1012, 1029, 0)
 GDINO_MAX_TEXT_TOKENS = 256
 OWLV2_MAX_TOKENS = 16
 
+# Exit code of a refused BYOD input. The byod stage prints the reason once and the notebook's BYOD cell
+# stops without a traceback; any other failure keeps its traceback and still raises in the notebook.
+REFUSED_EXIT = 65
+
+
+class InputRefused(ValueError):
+    """A BYOD input breaks a documented input rule (not a defect of this stage file)."""
+
+
+def refuse(error):
+    reason = str(error).rstrip(". ")
+    print(f"Refused: {reason}. Fix your dataset, then run the BYOD cell again.", flush=True)
+    raise SystemExit(REFUSED_EXIT)
+
 gdino_model = gdino_processor = owlv2_model = owlv2_processor = None
 
 PINS = {
@@ -498,8 +512,13 @@ def predict_byod(records,prompts):
         text,vocab=gdino_prompt_text(prompts)
         ids=gdino_processor.tokenizer(text,add_special_tokens=True,truncation=False)['input_ids']
         if len(ids)>GDINO_MAX_TEXT_TOKENS or len(phrase_token_groups(ids))!=len(vocab):
-            raise ValueError('Grounding DINO vocabulary exceeds token limit or phrase boundaries')
-        owlv2_validate_tokens(prompts)
+            raise InputRefused(f'boxes.csv labels {vocab}: the combined Grounding DINO vocabulary has {len(ids)}'
+                               f' tokens (limit {GDINO_MAX_TEXT_TOKENS}) or loses a phrase boundary; use fewer or'
+                               ' shorter labels')
+        try:
+            owlv2_validate_tokens(prompts)
+        except ValueError as error:
+            raise InputRefused(f'boxes.csv labels: {error}; shorten that label') from None
         gdino_model=AutoModelForZeroShotObjectDetection.from_pretrained(str(GDINO_DIR),revision=GDINO_REVISION,local_files_only=True,trust_remote_code=False).to(DEVICE).eval()
         gd=[gdino_predict(r['image'],prompts) for r in records]
         del gdino_model,gdino_processor
@@ -595,7 +614,11 @@ def stage_owlv2(job):
 
 def stage_byod(job):
     load_libraries()
-    records = load_images(job["images"])
+    try:
+        records = load_images(job["images"])
+    except RuntimeError as error:
+        # The file changed after the BYOD cell checked it: the input is refused, the stage is not broken.
+        raise InputRefused(f"{error}; the file changed after the BYOD cell checked it") from None
     gd, owl = predict_byod(records, job["prompts"])
     return {"grounding_dino": gd, "owlv2": owl}
 
@@ -617,7 +640,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     job = json.loads(args.job.read_text(encoding="utf-8"))
     configure(job)
-    result = STAGES[args.stage](job)
+    try:
+        result = STAGES[args.stage](job)
+    except InputRefused as error:
+        if args.stage != "byod":
+            raise
+        refuse(error)
     payload = {"format": STAGE_FORMAT, "stage": args.stage, **result}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     # Strict JSON: a NaN/Infinity that slipped past validation fails here instead of being written.
