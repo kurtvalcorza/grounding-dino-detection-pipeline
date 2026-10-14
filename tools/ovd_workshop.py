@@ -48,6 +48,8 @@ RUN_THRESHOLD_SWEEP = False
 PROMPT_VARIANTS = {}
 PROMPT_VARIANT_TO_CANONICAL = {}
 REORDERED_PROMPTS = ["platelet", "red blood cell", "white blood cell"]
+# Lowest score kept by the extra, untimed candidate pass (floor-sensitivity table in the notebook).
+CANDIDATE_FLOOR = 0.001
 
 MAX_PROMPTS = 16
 MAX_PROMPT_CHARS = 48
@@ -58,6 +60,20 @@ GDINO_REVISION = OWLV2_REVISION = None
 GDINO_SPECIAL_TOKEN_IDS = (101, 102, 1012, 1029, 0)
 GDINO_MAX_TEXT_TOKENS = 256
 OWLV2_MAX_TOKENS = 16
+
+# Exit code of a refused BYOD input. The byod stage prints the reason once and the notebook's BYOD cell
+# stops without a traceback; any other failure keeps its traceback and still raises in the notebook.
+REFUSED_EXIT = 65
+
+
+class InputRefused(ValueError):
+    """A BYOD input breaks a documented input rule (not a defect of this stage file)."""
+
+
+def refuse(error):
+    reason = str(error).rstrip(". ")
+    print(f"Refused: {reason}. Fix your dataset, then run the BYOD cell again.", flush=True)
+    raise SystemExit(REFUSED_EXIT)
 
 gdino_model = gdino_processor = owlv2_model = owlv2_processor = None
 
@@ -79,6 +95,7 @@ def configure(job):
     global EVAL_SCORE_FLOOR, GDINO_BOX_THRESHOLD, GDINO_TEXT_THRESHOLD, OWLV2_THRESHOLD
     global RUN_PROMPT_EXPERIMENT, RUN_THRESHOLD_SWEEP, PROMPT_VARIANTS, PROMPT_VARIANT_TO_CANONICAL
     global REORDERED_PROMPTS, GDINO_DIR, OWLV2_DIR, GDINO_REVISION, OWLV2_REVISION
+    global CANDIDATE_FLOOR
     settings = job.get("settings", {})
     EVAL_SCORE_FLOOR = float(settings.get("eval_score_floor", EVAL_SCORE_FLOOR))
     GDINO_BOX_THRESHOLD = float(settings.get("gdino_box_threshold", GDINO_BOX_THRESHOLD))
@@ -89,6 +106,7 @@ def configure(job):
     PROMPT_VARIANTS = settings.get("prompt_variants", PROMPT_VARIANTS)
     PROMPT_VARIANT_TO_CANONICAL = settings.get("prompt_variant_to_canonical", PROMPT_VARIANT_TO_CANONICAL)
     REORDERED_PROMPTS = settings.get("reordered_prompts", REORDERED_PROMPTS)
+    CANDIDATE_FLOOR = float(settings.get("candidate_floor", CANDIDATE_FLOOR))
     if "gdino" in job:
         GDINO_DIR = Path(job["gdino"]["dir"])
         GDINO_REVISION = job["gdino"]["manifest"]["revision"]
@@ -462,12 +480,21 @@ def run_model(name, predict, test_records, prompt_records, canonical_prompts, vi
             reordered = predict(record["image"], REORDERED_PROMPTS)
             prompt_results.append(("order_canonical", record["id"], canonical_order))
             prompt_results.append(("order_reordered", record["id"], reordered))
+            # Control: the identical canonical prompt once more. If even this differs, an order
+            # difference cannot be attributed to the order.
+            prompt_results.append(("order_canonical_repeat", record["id"],
+                                   predict(record["image"], canonical_prompts)))
 
     threshold_sweep = []
     if RUN_THRESHOLD_SWEEP:
         for floor in (0.03, 0.05, 0.10, 0.20):
             preds = [predict(r["image"], canonical_prompts, floor) for r in prompt_records]
             threshold_sweep.append((floor, preds))
+
+    # Floor-sensitivity cache: every test-image candidate down to CANDIDATE_FLOOR, in one extra pass after
+    # all the passes above (untimed). The notebook filters it at higher floors and checks that the
+    # EVAL_SCORE_FLOOR filter reproduces `predictions` exactly.
+    candidates = [predict(r["image"], canonical_prompts, CANDIDATE_FLOOR) for r in test_records]
 
     return {
         "predictions": predictions,
@@ -476,6 +503,8 @@ def run_model(name, predict, test_records, prompt_records, canonical_prompts, vi
         "visual_predictions": visual_predictions,
         "prompt_results": prompt_results,
         "threshold_sweep": threshold_sweep,
+        "candidates": candidates,
+        "candidate_floor": CANDIDATE_FLOOR,
     }
 
 
@@ -498,8 +527,13 @@ def predict_byod(records,prompts):
         text,vocab=gdino_prompt_text(prompts)
         ids=gdino_processor.tokenizer(text,add_special_tokens=True,truncation=False)['input_ids']
         if len(ids)>GDINO_MAX_TEXT_TOKENS or len(phrase_token_groups(ids))!=len(vocab):
-            raise ValueError('Grounding DINO vocabulary exceeds token limit or phrase boundaries')
-        owlv2_validate_tokens(prompts)
+            raise InputRefused(f'boxes.csv labels {vocab}: the combined Grounding DINO vocabulary has {len(ids)}'
+                               f' tokens (limit {GDINO_MAX_TEXT_TOKENS}) or loses a phrase boundary; use fewer or'
+                               ' shorter labels')
+        try:
+            owlv2_validate_tokens(prompts)
+        except ValueError as error:
+            raise InputRefused(f'boxes.csv labels: {error}; shorten that label') from None
         gdino_model=AutoModelForZeroShotObjectDetection.from_pretrained(str(GDINO_DIR),revision=GDINO_REVISION,local_files_only=True,trust_remote_code=False).to(DEVICE).eval()
         gd=[gdino_predict(r['image'],prompts) for r in records]
         del gdino_model,gdino_processor
@@ -617,7 +651,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     job = json.loads(args.job.read_text(encoding="utf-8"))
     configure(job)
-    result = STAGES[args.stage](job)
+    try:
+        result = STAGES[args.stage](job)
+    except InputRefused as error:
+        if args.stage != "byod":
+            raise
+        refuse(error)
     payload = {"format": STAGE_FORMAT, "stage": args.stage, **result}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     # Strict JSON: a NaN/Infinity that slipped past validation fails here instead of being written.

@@ -189,8 +189,9 @@ def test_stage_json_round_trips_to_the_kernel_objects_exactly(tmp_path):
     assert visual == {"r0": predict(None, ["a", "b"]), "r1": predict(None, ["a", "b"])}
     assert [(v, i) for v, i, _p in prompt_results] == [
         ("canonical", "r0"), ("canonical", "r1"), ("upper", "r0"), ("upper", "r1"),
-        ("order_canonical", "r0"), ("order_reordered", "r0")]
-    assert prompt_results[-1][2] == predict(None, ["b", "a"])
+        ("order_canonical", "r0"), ("order_reordered", "r0"), ("order_canonical_repeat", "r0")]
+    assert prompt_results[-2][2] == predict(None, ["b", "a"])
+    assert prompt_results[-1][2] == predict(None, ["a", "b"])  # identical-prompt repeat control
     assert [floor for floor, _p in sweep] == [0.03, 0.05, 0.10, 0.20]
     assert len(payload["times"]) == 3 and payload["peak_gpu_memory_bytes"] is None
 
