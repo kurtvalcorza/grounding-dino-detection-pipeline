@@ -29,4 +29,4 @@ def test_box_iou_pairs_match_the_printed_output_and_ranges_name_the_runs():
     assert "0.341 / 0.422 / 0.525 / 0.568 / 0.637 / 0.695" in md
     assert "0.324 / 0.425 / 0.519 / 0.574 / 0.623 / 0.672" in md
     assert "`platelet` 0.000 → 0.289 to 0.366" in md
-    assert "(0.931 → 0.910 and 0.843)" in md and "(0.695 → 0.517 and 0.524)" in md
+    assert "(0.931 → 0.910, 0.843 and 0.864)" in md and "(0.695 → 0.517, 0.524 and 0.542)" in md
