@@ -392,9 +392,9 @@ def test_no_learner_cell_asserts_a_result():
 
 def test_worked_answers_quote_the_recorded_t4_run_and_the_spread():
     markdown = _markdown()
-    assert "**Run-to-run spread.**" in markdown and "**0.570, 0.608, 0.632 and 0.630**" in markdown
-    # Tier C T32-2: worked answers quote the current blob's hosted run (a2bdaaf), not the earlier Kaggle run.
-    assert "0.109 → 0.630 and mAP75 0.052 → 0.461" in markdown and "Colab T4 run of revision `a2bdaaf`" in markdown
+    assert "**Run-to-run spread.**" in markdown and "**0.570, 0.608, 0.632, 0.630 and 0.610**" in markdown
+    # Tier C T32-2, then the 2026-10-25 ruling: worked answers state ranges over the named hosted runs.
+    assert "0.109 → 0.610 to 0.632 and mAP75 0.052 → 0.450 to 0.461" in markdown and "of revision `a2bdaaf`" in markdown
     assert "0.109 → 0.632" not in markdown and "0.000 → 0.343" not in markdown
     assert "to about 0.64" not in markdown and "0.109 → 0.570" not in markdown
 

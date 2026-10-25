@@ -127,8 +127,8 @@ MARKDOWN_MARKERS = (
     "**What the split does and does not protect against.**",
     # GDD-m3: the run-to-run spread is stated and the worked answers quote the recorded T4 run
     "**Run-to-run spread.**",
-    "**0.570, 0.608, 0.632 and 0.630**",
-    "0.109 → 0.630 and mAP75 0.052 → 0.461",
+    "**0.570, 0.608, 0.632, 0.630 and 0.610**",
+    "0.109 → 0.610 to 0.632 and mAP75 0.052 → 0.450 to 0.461",
     # GDD-m4: the notebook builds its own Python 3.12.12 environment whatever the kernel runs
     "Section 1 builds its own **Python 3.12.12** environment",
     # GDD-M3: the stated BYOD minimum (computed by byod_record_limits; a test ties the two together)
