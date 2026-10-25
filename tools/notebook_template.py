@@ -97,7 +97,7 @@ TEMPLATE = {
         "pipeline to verify box parity. The default path needs no repository clone, no DIMER worker or service, no "
         "credential, no upload dialog and no configuration edit (NOTEBOOK_SPEC 2.2 §5). A CUDA runtime is used "
         "automatically when present, and **a GPU runtime is required in practice**: the six "
-        "epochs took between 14.4 and 15.9 minutes in the recorded T4 runs (879 s, 862 s and 952.8 s in " + H + ", 931 s in the Kaggle T4 run of blob `dc1218be` (2026-09-20)) and the whole session between 21.3 and 25.1 minutes including the downloads (1,301.6 s, 1,277.0 s and 1,333.1 s on Colab T4, 1,503.7 s on Kaggle T4; yours may differ), while a CPU runtime would take hours (Swin-T + BERT at 800-px inputs for 55 "
+        "epochs took between 14.4 and 15.9 minutes in the recorded T4 runs (879 s, 862 s and 952.8 s in " + H + ", 931 s in the Kaggle T4 run of blob `dc1218be` (2026-09-20)) and the whole session between 21.3 and 25.1 minutes including the downloads (1,301.6 s, 1,277.0 s and 1,333.1 s on Colab T4, 1,503.7 s on Kaggle T4; yours may differ), while a CPU runtime would take hours (an estimate: Swin-T + BERT at 800-px inputs for 55 "
         "training steps per epoch, each over four images, plus a validation pass per epoch). Building the isolated "
         "environment comes on top of this."
     ),
@@ -187,7 +187,7 @@ TEMPLATE = {
     ),
     "prerequisites": [
         "- **Learner:** basic Python, NumPy and PIL, and Colab or Jupyter familiarity; what a bounding box in xyxy pixel coordinates is. No prior experience with Grounding DINO, detection metrics or fine-tuning: the notebook explains grounding scores, IoU, AP50 / AP75, the two baselines, Hungarian matching and validation-based epoch selection where they are first used, and the Glossary repeats them.",
-        "- **Runtime:** a fresh **Linux x86_64** runtime with a CUDA GPU — Google Colab, Kaggle or Linux Jupyter. Section 1 builds its own **Python 3.12.12** environment from a hash-locked list of manylinux wheels, so the kernel's own Python version does not matter (Colab's kernel runs Python 3.13 as of September 2026; the stages still run on 3.12.12), and a Windows or macOS kernel is not supported (Section 1 stops with that message). The default path uses CUDA automatically when present. In the recorded Kaggle Tesla T4 run of the previous notebook version (same model stages, Python 3.12.13 in the kernel) the six epochs with per-epoch validation took 931 s and the whole run 1,504 s including about 700 MB of downloads; a CPU runtime would take hours. The locked install (PyTorch 2.14.0 with its CUDA libraries, a few GB) and the 689 MB checkpoint are the large downloads of the run; the photographs are about 7.6 MB.",
+        "- **Runtime:** a fresh **Linux x86_64** runtime with a CUDA GPU — Google Colab, Kaggle or Linux Jupyter. Section 1 builds its own **Python 3.12.12** environment from a hash-locked list of manylinux wheels, so the kernel's own Python version does not matter (Colab's kernel runs Python 3.13 as of September 2026; the stages still run on 3.12.12), and a Windows or macOS kernel is not supported (Section 1 stops with that message). The default path uses CUDA automatically when present. In the recorded Kaggle Tesla T4 run of the previous notebook version (same model stages, Python 3.12.13 in the kernel) the six epochs with per-epoch validation took 931 s and the whole run 1,504 s including about 700 MB of downloads; a CPU runtime would take hours (an estimate). The locked install (PyTorch 2.14.0 with its CUDA libraries, a few GB) and the 689 MB checkpoint are the large downloads of the run; the photographs are about 7.6 MB.",
         "- **Data contract:** records are `{id, image, boxes, labels}` — `image` a PIL image (or a file decodable by Pillow) with sides within 16..4096 px, `boxes` one or more `[x0, y0, x1, y1]` pixel boxes inside it (at most 300), `labels` one phrase per box drawn from the prompt vocabulary (1..16 distinct phrases of at most 48 characters each, given beside the records). Ids match `[A-Za-z0-9_.:-]{1,64}` and are unique; a training split needs 8..5,000 records. Splitting de-duplicates by decoded pixels so no image lands in two splits, and the seeded BYOD split (65 / 15 / 20 %) must leave at least 8 training, 2 validation and 2 test images, so **a BYOD dataset needs at least 12 distinct images** (Section 4 computes and prints this minimum, checks it before any model runs and names the split it refuses).",
         "- **BYOD layout:** one zip (by upload on Colab, or by path in `BYOD_PATH` on any runtime; a folder path also works) holding the images and a `boxes.csv` with the columns `file`, `x0`, `y0`, `x1`, `y1`, `phrase` (one row per box). The archive is read without its folders, so every file name must be unique; two files with one name are refused with a message naming both. An archive of more than 10,000 files or more than 1 GB once expanded is refused before anything is decompressed.",
         "- **Validation is structural, not semantic:** every image is decoded and every box and phrase checked against the image and the vocabulary, but nothing checks that a box outlines what its phrase says — a mislabelled set is fine-tuned on without complaint.",
@@ -460,9 +460,8 @@ TEMPLATE = {
                 "make small, order-dependent differences that grow over the 330 training steps. Six recorded GPU runs of this "
                 "default recipe on the same split ended at **0.570, 0.608, 0.632, 0.630, 0.610 and 0.614** test mAP50 (an RTX 5070 Ti "
                 "package-API run, an RTX 5070 Ti notebook pre-flight, the Kaggle T4 run of blob `dc1218be` (2026-09-20), "
-                "and " + H + ", which the worked answers quote). A result a "
-                "few hundredths away from the quoted one is that spread, not a fault; the frozen numbers in Sections 5 and 6 "
-                "move only in the third decimal between GPUs.\n\n"
+                "and " + H + ", which the worked answers quote). A result away from the quoted ones "
+                "can be that spread, not a fault.\n\n"
                 "**Predict before running:** will the validation mAP50 rise in every epoch? Will the training loss fall much?"
             ),
             "code": (
@@ -683,7 +682,7 @@ TEMPLATE = {
         "<details><summary>Check your reasoning</summary>Slower, and not evenly. The build record's raw-API probe of this "
         "rate (four epochs, same split) reached only 0.292 test mAP50, and `white blood cell` drifted *down* on validation "
         "(0.556 → 0.411) while the phrases with many training boxes rose. Whether six epochs show the same shape — a slower, "
-        "phrase-uneven climb — is what your run tests. The difference from the default (about 0.6) is many times the run-to-run spread, but that probe ran "
+        "phrase-uneven climb — is what your run tests. The gap to the default recipe's 0.570 to 0.632 in the six recorded GPU runs is many times the spread of those runs, but that probe ran "
         "four epochs and the default six, so the gap mixes the lower rate with the shorter schedule and cannot be put down "
         "to the rate alone; your six-epoch run at the lower rate separates the two on this split — but it is one split, and your six-epoch numbers are your own "
         "result.</details>\n\n"
