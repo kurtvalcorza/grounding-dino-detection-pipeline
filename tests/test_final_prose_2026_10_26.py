@@ -2,7 +2,7 @@
 
 Run-status sentences, timing promises and unlabelled expectations are removed or recast
 as records of named runs.
-Fails on PR #14 head 728fea7.
+Fails on PR #14 head 28369a7.
 """
 import json
 from pathlib import Path
@@ -26,6 +26,9 @@ def test_final_prose_pass():
         'training results by a few hundredths',
         'move only in the third decimal between GPUs',
         'vary by a few hundredths between runs',
+        'varies by a few hundredths',
+        'hundredth',
+        'third decimal',
     ):
         assert gone not in md, gone
     for kept in (
@@ -33,7 +36,8 @@ def test_final_prose_pass():
         '0.570 to 0.632 in the six recorded GPU runs',
         'would take hours (an estimate: Swin-T',
         'would take hours (an estimate). The locked install',
-        'the recorded training runs differed from each other',
+        'the recorded training runs differed from each other — see',
         'lists six test mAP50s from 0.570 to 0.632); yours may differ.',
+        'and the recorded training runs differed from each other (Section 7, **Run-to-run spread**); the deltas',
     ):
         assert kept in md, kept

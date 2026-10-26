@@ -501,7 +501,7 @@ TEMPLATE = {
                 "the per-phrase rows. The cell records whether the adapted model beats the frozen one and both baselines, prints "
                 "a one-line reading of the outcome and keeps one row per pass in a run history; a result where adaptation did "
                 "not help is reported, and the export below still runs. Ninety-four images from one seeded split give **no "
-                "dispersion estimate**, and the training itself varies by a few hundredths between runs (Section 7); the deltas "
+                "dispersion estimate**, and the recorded training runs differed from each other (Section 7, **Run-to-run spread**); the deltas "
                 "are sample-sanity evidence that the adaptation contract works, not a benchmark, and a gain on three microscope "
                 "phrases says nothing about other vocabularies or other imaging until you measure them.\n\n"
                 "**Predict before running:** which phrase will gain least from the fine-tuning, and why? Will mAP75 rise as "
