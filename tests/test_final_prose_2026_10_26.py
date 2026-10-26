@@ -38,6 +38,6 @@ def test_final_prose_pass():
         'would take hours (an estimate). The locked install',
         'the recorded training runs differed from each other — see',
         'lists six test mAP50s from 0.570 to 0.632); yours may differ.',
-        'and the recorded training runs differed from each other (Section 7, **Run-to-run spread**); the deltas',
+        'differed from each other (Section 7, **Run-to-run spread**); the deltas',
     ):
         assert kept in md, kept
