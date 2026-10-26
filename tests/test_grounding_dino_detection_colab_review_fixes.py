@@ -217,12 +217,14 @@ def test_oversized_archive_is_refused_before_decompression(monkeypatch, tmp_path
 
 def test_cancelled_upload_no_colab_and_missing_path_are_actionable(monkeypatch, tmp_path):
     _fake_colab(monkeypatch, [{}])
-    with pytest.raises(ValueError, match=r"Upload exactly one .zip file \(received 0\).*BYOD_PATH"):
+    # DAT20: each is a refusal (a ValueError carrying dimer_refusal) that names the file and the fix.
+    with pytest.raises(ValueError, match=r"^\(no file\): upload exactly one .zip file \(received 0.*BYOD_PATH") as caught:
         _section4(monkeypatch, tmp_path)
+    assert caught.value.dimer_refusal
     monkeypatch.setitem(sys.modules, "google.colab", None)  # `from google.colab import files` raises ImportError
-    with pytest.raises(RuntimeError, match="needs Google Colab.*BYOD_PATH"):
+    with pytest.raises(ValueError, match=r"^\(no file\): the upload dialog needs Google Colab.*BYOD_PATH"):
         _section4(monkeypatch, tmp_path)
-    with pytest.raises(FileNotFoundError, match="does not exist in this runtime"):
+    with pytest.raises(ValueError, match="^missing.zip: .*does not exist in this runtime"):
         _section4(monkeypatch, tmp_path, byod_path=str(tmp_path / "missing.zip"))
 
 
