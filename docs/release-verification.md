@@ -167,11 +167,57 @@ stated runtime, not general estimates.
 | 2026-09-20 | committed template at the candidate revision (blob differs from the committed one in the recorded generating revision only) | Local WSL harness (`run_nb_local.py`: nbclient, fresh `python3` kernel, `CUDA_VISIBLE_DEVICES=0`, `HF_HUB_OFFLINE=1`, `DIMER_NOTEBOOK_CI_PREINSTALLED=1`), Python 3.12.3, torch 2.14.0+cu130, RTX 5070 Ti (`cuda:0`), snapshot and photographs pre-staged, the CPU unit suite running alongside | Default sample path, all 11 code cells: pinned install skipped (pre-installed), `stage_missing_files` reported nothing to fetch, `verify_snapshot` PASS (9 files), 364 photographs re-hashed from the cache, 4,886 boxes split 220 / 50 / 94, four refusal probes raised, the synthetic scene detected (`box_iou` 0.964 / 0.944), grid prior 0.009 and generic `cell` relabelled 0.076, frozen 0.109 / 0.052 / 0.294 in 53.2 s, six epochs 897.8 s (validation mAP50 0.162 → 0.348 / 0.429 / 0.520 / 0.591 / 0.648 / 0.677, epoch 6 kept), adapted 0.608 / 0.450 / 0.952 (`red blood cell` 0.042 → 0.812, `white blood cell` 0.284 → 0.715, `platelet` 0.000 → 0.297), the scene re-detected with both boxes at `box_iou` 0.916 / 0.9, four panels written, adapter 44,776,600 B / 228 tensors, reload parity 8/8, 8 outputs written | 1166.8 s | PASS — pre-flight only; not promotion evidence |
 | 2026-09-14 | `9bf9e00` / `b1e416c68b76` (`TASK-INFERENCE`, superseded) | Kaggle CPU (`kurtvalcorza/dimer-nb2-grounding-dino-detection` v1) | Default sample path | 271.8 s | PASS — 8/8 ok code cells, 20 files, 690 MB staged; not evidence for the `E2E` blob |
 
+### Hosted Colab T4 runs of blob `3d248f84` (2026-10-29)
+
+These runs executed the PR head `2040785777d77441f8cbd20bee4253b00c41b799`, notebook `tutorials/grounding_dino_detection_colab.ipynb` blob `3d248f84054adf124557c51072e501e7a7fa2ea6`, fetched at the 40-character SHA and Git-blob verified, with the Colab CLI (`colab exec -f`) on a fresh Colab Tesla T4 session (not a browser `Run all`). Each `run_summary.json` records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released), and the SHA-256 of each executed notebook equals the summary's `executed_sha256`.
+
+**Default path (2026-10-29 12:53:38 UTC start).** Default settings, no overrides; session `suite-grounding-2040785-d705`; wall 1356.5 s (`wall_s`); `code_cells` 13, `executed_cells` 10, 0 errors. Retained evidence: [`docs/execution-evidence/2026-10-29/`](execution-evidence/2026-10-29/).
+
+Printed by the default run (verbatim lines from the executed outputs):
+
+```text
+{'verified_files': 9, 'revision': 'a2bb814dd30d776dcf7e30523b00659f4f141c71'}
+{'grid_prior_baseline': {'map50': 0.009, 'map75': 0.0, 'recall50': 0.199}, 'n': 94, 'note': "a grid of 107x101 px boxes labelled 'red blood cell'"}
+{'generic_prompt_baseline': {'map50': 0.075, 'map75': 0.027, 'recall50': 0.514}, 'generic_prompt': 'cell', 'note': "every predicted box relabelled 'red blood cell'", 'seconds': 46.2}
+{'frozen_model_test': {'map50': 0.109, 'map75': 0.052, 'recall50': 0.293}, 'n': 94, 'boxes': 1295, 'predictions': 5173, 'adapted': False, 'verdict': 'measured', 'seconds': 47.7}
+{'map50': {'grid_prior': 0.009, 'generic_prompt': 0.075, 'frozen': 0.109, 'adapted': 0.62}}
+{'map75': {'grid_prior': 0.0, 'generic_prompt': 0.027, 'frozen': 0.052, 'adapted': 0.447}}
+{'recall50': {'grid_prior': 0.199, 'generic_prompt': 0.514, 'frozen': 0.293, 'adapted': 0.947}}
+{'delta_vs_frozen': {'map50': 0.511, 'map75': 0.395, 'recall50': 0.655}}
+{'frozen_beats_grid_prior': True, 'frozen_beats_generic_prompt': True}
+{'reload_parity': {'identical_images': 8, 'of': 8, 'boxes_per_image': [130, 150, 123, 143, 158, 112, 123, 128]}, 'reloaded_best_epoch': 6}
+```
+
+**DAT20 refusal record (2026-10-29, blob `3d248f84`).** Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_PATH` `''` → `'/etc/hostname'` (the run copy differs from the blob in exactly those 2 source lines). The suite cut the run copy right after the refusing cell `grounding_dino_detection-17`, dropping 11 cells (5 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `8a02aa21a8231dd437eaf27cf347167d36dc6fa483027a84a555c10c413fd0e7` (Git blob `76ef1a9f`), equal to the summary's `run_copy_sha256`. The cut copy's earlier code cells completed without an error output; the refusing cell's only error output has `ename` `IsolatedCellRefusal` and no traceback, and its output holds exactly one `Refused:` line:
+
+```text
+Refused: hostname: ValueError: /etc/hostname is neither a directory nor a zip file; fix the file, then run this cell and every cell after it again (the earlier results of this session and their outputs/ files were removed).
+```
+
+This run says nothing about the 11 cut cells, which did not run in it. Session `suite-grounding-2040785-d705`, wall 111.8 s. Retained evidence: [`docs/execution-evidence/2026-10-29/`](execution-evidence/2026-10-29/).
+
+**Local-path redaction.** Local paths were replaced byte-wise by `<local-run-dir>` (and the Colab CLI install path by `<colab-cli-tool-dir>/`) before the first commit; each executed notebook and run copy was checked against its `run_summary.json` before any edit.
+
+| File (under `docs/execution-evidence/2026-10-29/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_default.ipynb` | `3a93a9e9a6a9f5cf87331398c64fbf09c26d580090f8185617d7f7a98205710a` | `3a93a9e9a6a9f5cf87331398c64fbf09c26d580090f8185617d7f7a98205710a` (unchanged, no local path) |
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_default_exec.log` | `8bf9ec91d168779c04872f5a7a9e62bb79a5ce3d61c07223771cb85093a889b8` | `884736b83a529384e40ca12adf870273a44a1ffc3cc879ee860a1d6be789640b` (2 local-path replacements) |
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_default_run_summary.json` | `bb7bbfa073edc346464dfd1d685e96b13218d893b82fd652c721c19fa91f7aa9` | `bb7bbfa073edc346464dfd1d685e96b13218d893b82fd652c721c19fa91f7aa9` (unchanged, no local path) |
+
+| File (under `docs/execution-evidence/2026-10-29/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_refusal.ipynb` | `73a6ea5b2b15dde6538b7d510b2f7fabdd477aefa81078fe50a13105c089c045` | `73a6ea5b2b15dde6538b7d510b2f7fabdd477aefa81078fe50a13105c089c045` (unchanged, no local path) |
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_refusal_exec.log` | `3c2b747f0746eee915c018e8b5bd0f22776b3efbd009b1c5a0cf736c4f5c2ce7` | `87870e7a23bc245756a95ff97bab930acefa55d0b98204819211bc9f09f5d149` (2 local-path replacements) |
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_refusal_run_summary.json` | `4e92b91d0815590e72b305403d99e2d5dad0fd0085bf039ae0cd2c83d02fa776` | `4e92b91d0815590e72b305403d99e2d5dad0fd0085bf039ae0cd2c83d02fa776` (unchanged, no local path) |
+| `grounding_dino_detection_colab_2040785_colab-cli-t4_refusal_run_copy.ipynb` | `8a02aa21a8231dd437eaf27cf347167d36dc6fa483027a84a555c10c413fd0e7` | `8a02aa21a8231dd437eaf27cf347167d36dc6fa483027a84a555c10c413fd0e7` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input (REL12) and a browser `Run all` of the interactive journeys (REL2).
+
 ## Current status
 
 **Candidate (2026-10-26, final prose pass, second follow-up).** The notebook blob of `tutorials/grounding_dino_detection_colab.ipynb` at `b327d91` is `4cd2580a90f9a48aa55988b795a1db352f6dfe3a` (commit `b327d91`), regenerated from `18a2a28` on the coordinator's request: the Section 8 dispersion paragraph's 'the training itself varies by a few hundredths between runs (Section 7)' now reads 'the recorded training runs differed from each other (Section 7, **Run-to-run spread**)'. A grep of the notebook for 'hundredth', 'decimal', 'expect' and 'typically' finds no other generalisation (the remaining 'expect' hits are a Predict question to the learner, one run-labelled sentence and code identifiers). Markdown only. This exact blob (PR #14 head `361acff`) **passed** its confirming hosted run: Colab CLI sequential execution on a fresh Colab Tesla T4, 2026-10-26, 13/13 code cells in one pass, no restart, 0 errors, 1226.1 s wall; test mAP50 0.109 → 0.636, mAP75 0.052 → 0.47, epoch 6 kept, reload parity 8/8; evidence in `docs/execution-evidence/2026-10-26/`. This PR's runs cover the default path only. Remaining gates: REL12 (a hosted BYOD run with one accepted and one refused input) and REL2 (a browser Run all). Runs of earlier blobs are history (REL14). Blobs `ff3ad503` and `63fb86c1` were never run; the confirming run of `21e405bf` and the earlier records below stay as history.
 
-The current blob `3d248f84` (code commit `d50e742`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); its hosted Colab T4 runs (the default path and a scripted refusal, `USE_BYOD=True;BYOD_PATH='/etc/hostname'`) are pending, and the hosted runs of earlier blobs, including `4cd2580a90f9`, are history for it (REL14).
+The current blob `3d248f84` (code commit `d50e742`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); on 2026-10-29 its default path (13 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `grounding_dino_detection-17`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates are REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); earlier blobs' runs are history (REL14).
 
 **Drift recorded, not fixed (2026-10-26, final prose pass; Kurt's ruling: drift is recorded here, never fixed).** The notebook prose of blob `4cd2580a` labels every run-derived number with the named recorded runs that printed it, so these differences are not prose errors. This confirming run printed these values outside the recorded values and spans the prose names. The notebook is not edited:
 

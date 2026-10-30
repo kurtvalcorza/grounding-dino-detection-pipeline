@@ -1,0 +1,72 @@
+{
+  "repo": "grounding-dino-detection-pipeline",
+  "sha": "2040785777d77441f8cbd20bee4253b00c41b799",
+  "notebook": "tutorials/grounding_dino_detection_colab.ipynb",
+  "blob": "3d248f84054adf124557c51072e501e7a7fa2ea6",
+  "gpu": "T4",
+  "session": "suite-grounding-2040785-d705",
+  "started_utc": "2026-10-29T13:17:58+00:00",
+  "runner": "Colab CLI `colab exec -f` on a fresh session (not a browser Run all)",
+  "overrides": [
+    {
+      "name": "USE_BYOD",
+      "from": "False",
+      "to": "True"
+    },
+    {
+      "name": "BYOD_PATH",
+      "from": "''",
+      "to": "'/etc/hostname'"
+    }
+  ],
+  "run_copy_blob": "76ef1a9f6225c14df2e2ef1fb156c0d959e116c6",
+  "run_copy_sha256": "8a02aa21a8231dd437eaf27cf347167d36dc6fa483027a84a555c10c413fd0e7",
+  "run_copy_note": "refusal run: the run copy is the committed notebook with the listed assignment overrides, cut immediately after the refusal cell and re-serialised (nbformat layout); input_unchanged compares against that copy",
+  "truncated_after_cell": "grounding_dino_detection-17",
+  "refusal_cell_ref": "grounding_dino_detection-17",
+  "refusal_cell_index": 8,
+  "cells_dropped": 11,
+  "code_cells_dropped": 5,
+  "original_sha256": "9bce9edb483df23e8c10e1ee47d4a81af6e27190deb31c83332d2fa0f4afe76e",
+  "status": "[suite-grounding-2040785-d705] gpu-t4-s-usw4b0-r453fgus5w4h | Hardware: T4 | Shape: Standard | Variant: GPU | Status: IDLE",
+  "exec_exit_code": 0,
+  "stopped": true,
+  "stop_verified": true,
+  "wall_s": 111.8,
+  "input_unchanged": true,
+  "executed_file": "grounding_dino_detection_colab_2040785_colab-cli-t4_output.ipynb",
+  "log_cells": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "log_total": 8,
+  "code_cells": 8,
+  "executed_cells": 5,
+  "errors": [
+    {
+      "cell": "grounding_dino_detection-17",
+      "ename": "IsolatedCellRefusal",
+      "evalue": "hostname: ValueError: /etc/hostname is neither a directory nor a zip file; fix the file, then run this cell and every cell after it again (the earlier results of this session and their outputs/ files were removed)."
+    }
+  ],
+  "execution_counts": [],
+  "sequential": null,
+  "executed_sha256": "73a6ea5b2b15dde6538b7d510b2f7fabdd477aefa81078fe50a13105c089c045",
+  "log_sequential_complete": true,
+  "mode": "expect_refusal",
+  "refusal_line": "Refused: hostname: ValueError: /etc/hostname is neither a directory nor a zip file; fix the file, then run this cell and every cell after it again (the earlier results of this session and their outputs/ files were removed).",
+  "halting_cell_index": 8,
+  "halting_cell_id": "grounding_dino_detection-17",
+  "error_cells": [
+    8
+  ],
+  "refusal_fail_reasons": [],
+  "refusal_ok": true,
+  "verdict": "PASS"
+}
