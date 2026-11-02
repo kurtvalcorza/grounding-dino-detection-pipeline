@@ -77,7 +77,7 @@ def test_lock_is_fully_hashed_and_keeps_the_former_pins():
         assert "--hash=sha256:" in block, block.splitlines()[0]
     locked = {name.lower(): version for name, version in requirements}
     former = {"torch": "2.14.0", "torchvision": "0.29.0", "torchaudio": "2.11.0", "transformers": "4.57.6",
-              "safetensors": "0.8.0", "numpy": "2.1.3", "pillow": "11.3.0", "huggingface-hub": "0.36.2"}
+              "safetensors": "0.8.0", "numpy": "2.1.3", "pillow": "13.0.0", "huggingface-hub": "0.36.2"}
     assert {k: locked[k] for k in former} == former
     added = {"scipy": "1.18.1"}  # 2026-10-04: needed by the OWLv2 image processor
     assert {k: locked[k] for k in added} == added
