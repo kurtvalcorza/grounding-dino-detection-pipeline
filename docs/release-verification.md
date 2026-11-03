@@ -167,7 +167,94 @@ stated runtime, not general estimates.
 | 2026-09-20 | committed template at the candidate revision (blob differs from the committed one in the recorded generating revision only) | Local WSL harness (`run_nb_local.py`: nbclient, fresh `python3` kernel, `CUDA_VISIBLE_DEVICES=0`, `HF_HUB_OFFLINE=1`, `DIMER_NOTEBOOK_CI_PREINSTALLED=1`), Python 3.12.3, torch 2.14.0+cu130, RTX 5070 Ti (`cuda:0`), snapshot and photographs pre-staged, the CPU unit suite running alongside | Default sample path, all 11 code cells: pinned install skipped (pre-installed), `stage_missing_files` reported nothing to fetch, `verify_snapshot` PASS (9 files), 364 photographs re-hashed from the cache, 4,886 boxes split 220 / 50 / 94, four refusal probes raised, the synthetic scene detected (`box_iou` 0.964 / 0.944), grid prior 0.009 and generic `cell` relabelled 0.076, frozen 0.109 / 0.052 / 0.294 in 53.2 s, six epochs 897.8 s (validation mAP50 0.162 → 0.348 / 0.429 / 0.520 / 0.591 / 0.648 / 0.677, epoch 6 kept), adapted 0.608 / 0.450 / 0.952 (`red blood cell` 0.042 → 0.812, `white blood cell` 0.284 → 0.715, `platelet` 0.000 → 0.297), the scene re-detected with both boxes at `box_iou` 0.916 / 0.9, four panels written, adapter 44,776,600 B / 228 tensors, reload parity 8/8, 8 outputs written | 1166.8 s | PASS — pre-flight only; not promotion evidence |
 | 2026-09-14 | `9bf9e00` / `b1e416c68b76` (`TASK-INFERENCE`, superseded) | Kaggle CPU (`kurtvalcorza/dimer-nb2-grounding-dino-detection` v1) | Default sample path | 271.8 s | PASS — 8/8 ok code cells, 20 files, 690 MB staged; not evidence for the `E2E` blob |
 
-### Hosted Colab T4 runs of blob `3d248f84` (2026-10-29)
+### REL14 hosted runs of blob `fc54fc47` (2026-11-07)
+
+These 2 runs executed main `25536f8c577fd2a82f950d329c010a16de1619d9` (`tutorials/grounding_dino_detection_colab.ipynb` blob `fc54fc47d62fbce091e42f43be8a53772c5d6701`) as Colab CLI sequential executions (`colab exec -f`) on fresh Colab Tesla T4 VMs (session `suite-grounding-25536f8-d705`), not a browser `Run all`. Colab CLI 0.7.5 (the runner's installed version, read after the runs; `exec.log` does not record it). The saved notebooks have no execution counts; cell order is taken from `exec.log`. Each `run_summary.json` records the commit and notebook blob above, `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released); the SHA-256 of each executed notebook equals the summary's `executed_sha256`. Local paths in the exec logs are redacted byte-wise to `<local-run-dir>`; the notebooks and summaries carried none. This blob is the current blob; it replaced `698fbaf5` in the 2026-11-06 pillow 13 merge, so the runs of `698fbaf5` below are history (REL14).
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Code cells | Wall time | Outcome |
+|---|---|---|---|---:|---:|---|
+| 2026-11-07 10:07 | `25536f8` / `fc54fc47` | Colab CLI sequential execution, fresh Colab Tesla T4 | default settings, no overrides | 13/13 | 1232.8 s | **One pass, no restart, 0 errors**; [retained evidence](execution-evidence/2026-11-07/) |
+| 2026-11-07 10:30 | `25536f8` / `fc54fc47` | Colab CLI sequential execution, fresh Colab Tesla T4 | scripted DAT20 refusal: `USE_BYOD` `False` → `True` and `BYOD_PATH` `''` → `'/etc/hostname'` | 8/8 of the cut copy | 100.7 s | **Refused as designed**: one `Refused:` line, no traceback, earlier cells clean; [retained evidence](execution-evidence/2026-11-07/) |
+
+Lines printed by the default run (quoted from the executed notebook):
+
+```text
+{'grid_prior_baseline': {'map50': 0.009, 'map75': 0.0, 'recall50': 0.199}, 'n': 94, 'note': "a grid of 107x101 px boxes labelled 'red blood cell'"}
+{'generic_prompt_baseline': {'map50': 0.075, 'map75': 0.027, 'recall50': 0.514}, 'generic_prompt': 'cell', 'note': "every predicted box relabelled 'red blood cell'", 'seconds': 42.7}
+{'frozen_model_test': {'map50': 0.109, 'map75': 0.052, 'recall50': 0.293}, 'n': 94, 'boxes': 1295, 'predictions': 5173, 'adapted': False, 'verdict': 'measured', 'seconds': 44.7}
+{'map50': {'grid_prior': 0.009, 'generic_prompt': 0.075, 'frozen': 0.109, 'adapted': 0.606}}
+{'reload_parity': {'identical_images': 8, 'of': 8, 'boxes_per_image': [150, 165, 121, 141, 169, 111, 135, 128]}, 'reloaded_best_epoch': 6}
+```
+
+**DAT20 refusal record (2026-11-07).** Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_PATH` `''` → `'/etc/hostname'`. The suite cut the run copy right after the refusing cell `grounding_dino_detection-17`, dropping 11 cells (5 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `3eac3f74b396c10b085783e346546d27abf0d47a1b426db641d1635382eeb22b` (Git blob `965f81f6`), equal to the summary's `run_copy_sha256`. The 7 earlier code cells completed without an error. The refusing cell halted with `ename` `IsolatedCellRefusal` and printed exactly one `Refused:` line, with no traceback:
+
+```text
+Refused: hostname: ValueError: /etc/hostname is neither a directory nor a zip file; fix the file, then run this cell and every cell after it again (the earlier results of this session and their outputs/ files were removed).
+```
+
+This run says nothing about the 11 cut cells, which did not run in it.
+
+| File (under `docs/execution-evidence/2026-11-07/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_default.ipynb` | `6fd9ac95b9473ad130a1b790c865083df0cfee706fc8afc45d9188a840ceff50` | `6fd9ac95b9473ad130a1b790c865083df0cfee706fc8afc45d9188a840ceff50` (unchanged, no local path) |
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_default_exec.log` | `5b58ee2272a9f332897feb3b8f6c3e8607729752c19e8b73fa0a1cb1facc9980` | `ee903514352a8ef86a1cbaf0c0cb3fccb00d6f0f99f5f187246cf46723b8d5d4` (2 local-path replacements) |
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_default_run_summary.json` | `d120c10d38b2596c9d79bee24b51b523936695921f193a135c45d16053537821` | `d120c10d38b2596c9d79bee24b51b523936695921f193a135c45d16053537821` (unchanged, no local path) |
+
+| File (under `docs/execution-evidence/2026-11-07/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_refusal.ipynb` | `9d71191b5cacdf73bffebd60e12ee9ccf143c08b8fc3118f322e16e0f88b7503` | `9d71191b5cacdf73bffebd60e12ee9ccf143c08b8fc3118f322e16e0f88b7503` (unchanged, no local path) |
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_refusal_exec.log` | `335cf365318432af8f36f7899f54385cd6d919fe542e60346cbbd70a646317a8` | `59351aa7341164bf5b6f77bab4576378b7b2574af885e3215686c17a27c8a7b9` (2 local-path replacements) |
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_refusal_run_summary.json` | `c672cf1774b39b7d68ad965a0b909c4a64a389d08260d80b01e6859fc40599ed` | `c672cf1774b39b7d68ad965a0b909c4a64a389d08260d80b01e6859fc40599ed` (unchanged, no local path) |
+| `grounding_dino_detection_colab_25536f8_colab-cli-t4_refusal_run_copy.ipynb` | `3eac3f74b396c10b085783e346546d27abf0d47a1b426db641d1635382eeb22b` | `3eac3f74b396c10b085783e346546d27abf0d47a1b426db641d1635382eeb22b` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input and the interactive browser journeys (forms, uploads); every other open gate under Current status is unchanged.
+
+### REL14 hosted runs of blob `698fbaf5` (2026-11-02)
+
+History (REL14): `698fbaf5` was the current blob on 2026-11-03; the 2026-11-06 pillow 13 merge replaced it with `fc54fc47` (records above). These records are kept as they were written.
+
+These 2 runs executed main `6f55a96296f6855daf6b365faad97c59abd091d9` (`tutorials/grounding_dino_detection_colab.ipynb` blob `698fbaf583e3fdb777333856a5ac2f36d6a7460a`) as Colab CLI sequential executions (`colab exec -f`) on fresh Colab Tesla T4 VMs (session `suite-grounding-6f55a96-d705`), not a browser `Run all`. The Colab CLI version is not recorded in `exec.log` or `run_summary.json`. The saved notebooks have no execution counts; cell order is taken from `exec.log`. Each `run_summary.json` records the commit and notebook blob above, `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released); the SHA-256 of each executed notebook equals the summary's `executed_sha256`. Local paths in the exec logs are redacted byte-wise to `<local-run-dir>`; the notebooks and summaries carried none.
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Code cells | Wall time | Outcome |
+|---|---|---|---|---:|---:|---|
+| 2026-11-02 21:26 | `6f55a96` / `698fbaf5` | Colab CLI sequential execution, fresh Colab Tesla T4 | default settings, no overrides | 13/13 | 1303.2 s | **One pass, no restart, 0 errors**; [retained evidence](execution-evidence/2026-11-02/) |
+| 2026-11-02 21:49 | `6f55a96` / `698fbaf5` | Colab CLI sequential execution, fresh Colab Tesla T4 | scripted DAT20 refusal: `USE_BYOD` `False` → `True` and `BYOD_PATH` `''` → `'/etc/hostname'` | 8/8 of the cut copy | 145.1 s | **Refused as designed**: one `Refused:` line, no traceback, earlier cells clean; [retained evidence](execution-evidence/2026-11-02/) |
+
+Lines printed by the default run (quoted from the executed notebook):
+
+```text
+{'grid_prior_baseline': {'map50': 0.009, 'map75': 0.0, 'recall50': 0.199}, 'n': 94, 'note': "a grid of 107x101 px boxes labelled 'red blood cell'"}
+{'generic_prompt_baseline': {'map50': 0.075, 'map75': 0.027, 'recall50': 0.514}, 'generic_prompt': 'cell', 'note': "every predicted box relabelled 'red blood cell'", 'seconds': 44.2}
+{'frozen_model_test': {'map50': 0.109, 'map75': 0.052, 'recall50': 0.293}, 'n': 94, 'boxes': 1295, 'predictions': 5173, 'adapted': False, 'verdict': 'measured', 'seconds': 48.5}
+{'map50': {'grid_prior': 0.009, 'generic_prompt': 0.075, 'frozen': 0.109, 'adapted': 0.617}}
+{'reload_parity': {'identical_images': 8, 'of': 8, 'boxes_per_image': [157, 161, 138, 165, 192, 118, 155, 155]}, 'reloaded_best_epoch': 6}
+```
+
+**DAT20 refusal record (2026-11-02).** Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_PATH` `''` → `'/etc/hostname'` (the run copy differs from the blob in exactly those 2 source lines). The suite cut the run copy right after the refusing cell `grounding_dino_detection-17`, dropping 11 cells (5 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `e0098ba666d910929204892ab15b915a13e957c04cf94925223dd64cd54a4ce4` (Git blob `3b693e13`), equal to the summary's `run_copy_sha256`. The 7 earlier code cells completed without an error. The refusing cell halted with `ename` `IsolatedCellRefusal` and printed exactly one `Refused:` line, with no traceback:
+
+```text
+Refused: hostname: ValueError: /etc/hostname is neither a directory nor a zip file; fix the file, then run this cell and every cell after it again (the earlier results of this session and their outputs/ files were removed).
+```
+
+This run says nothing about the 11 cut cells, which did not run in it.
+
+| File (under `docs/execution-evidence/2026-11-02/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_default.ipynb` | `18872b43b58fb4bde07f04bb7a05b0bc0598430bc53071a5a6675b569735d9c6` | `18872b43b58fb4bde07f04bb7a05b0bc0598430bc53071a5a6675b569735d9c6` (unchanged, no local path) |
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_default_exec.log` | `26edeba63fe3a9c47430b9ed276c8eeb12edf2604d7437f9cc75381480757fb2` | `cf2a72b7fde83a56b108aa11c8f1722278209d96686af4c133b419c92aeabe47` (2 local-path replacements) |
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_default_run_summary.json` | `449d3774f2caaa080eb5c73a51b64aa64a918cf07f7265528509111b299effaf` | `449d3774f2caaa080eb5c73a51b64aa64a918cf07f7265528509111b299effaf` (unchanged, no local path) |
+
+| File (under `docs/execution-evidence/2026-11-02/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_refusal.ipynb` | `c0d472b97d8c3041d09c9ff0388b9f012bfee703360f37afce3db4133493fcb5` | `c0d472b97d8c3041d09c9ff0388b9f012bfee703360f37afce3db4133493fcb5` (unchanged, no local path) |
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_refusal_exec.log` | `b923c77303e8a7b35d920cd8ff1953ccc542756c5c2da45e558371109abaf6b1` | `49980cd6f9acf09010aa3ce0ac9c66bab44fb5d2d81870ed0c2dc652ea87ab06` (2 local-path replacements) |
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_refusal_run_summary.json` | `d807fd3112935d09583c698fbd4bc8c272489e4de6340a3851a95af5411374f5` | `d807fd3112935d09583c698fbd4bc8c272489e4de6340a3851a95af5411374f5` (unchanged, no local path) |
+| `grounding_dino_detection_colab_6f55a96_colab-cli-t4_refusal_run_copy.ipynb` | `e0098ba666d910929204892ab15b915a13e957c04cf94925223dd64cd54a4ce4` | `e0098ba666d910929204892ab15b915a13e957c04cf94925223dd64cd54a4ce4` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input and the interactive browser journeys (forms, uploads); every other open gate under Current status is unchanged.
+
+
+### Hosted Colab T4 runs of blob `3d248f84` (2026-10-29; history, REL14)
 
 These runs executed the PR head `2040785777d77441f8cbd20bee4253b00c41b799`, notebook `tutorials/grounding_dino_detection_colab.ipynb` blob `3d248f84054adf124557c51072e501e7a7fa2ea6`, fetched at the 40-character SHA and Git-blob verified, with the Colab CLI (`colab exec -f`) on a fresh Colab Tesla T4 session (not a browser `Run all`). Each `run_summary.json` records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released), and the SHA-256 of each executed notebook equals the summary's `executed_sha256`.
 
@@ -215,9 +302,11 @@ Not exercised by these runs: an accepted BYOD input (REL12) and a browser `Run a
 
 ## Current status
 
-**Candidate (2026-10-26, final prose pass, second follow-up).** The notebook blob of `tutorials/grounding_dino_detection_colab.ipynb` at `b327d91` is `4cd2580a90f9a48aa55988b795a1db352f6dfe3a` (commit `b327d91`), regenerated from `18a2a28` on the coordinator's request: the Section 8 dispersion paragraph's 'the training itself varies by a few hundredths between runs (Section 7)' now reads 'the recorded training runs differed from each other (Section 7, **Run-to-run spread**)'. A grep of the notebook for 'hundredth', 'decimal', 'expect' and 'typically' finds no other generalisation (the remaining 'expect' hits are a Predict question to the learner, one run-labelled sentence and code identifiers). Markdown only. This exact blob (PR #14 head `361acff`) **passed** its confirming hosted run: Colab CLI sequential execution on a fresh Colab Tesla T4, 2026-10-26, 13/13 code cells in one pass, no restart, 0 errors, 1226.1 s wall; test mAP50 0.109 → 0.636, mAP75 0.052 → 0.47, epoch 6 kept, reload parity 8/8; evidence in `docs/execution-evidence/2026-10-26/`. This PR's runs cover the default path only. Remaining gates: REL12 (a hosted BYOD run with one accepted and one refused input) and REL2 (a browser Run all). Runs of earlier blobs are history (REL14). Blobs `ff3ad503` and `63fb86c1` were never run; the confirming run of `21e405bf` and the earlier records below stay as history.
+**Candidate (2026-11-07, REL14).** The current blob `fc54fc47` (`main` at `25536f8`, after the 2026-11-06 pillow 13 merge) shows a refused BYOD input as exactly one `Refused: <file>: <reason>` line, with no traceback, and stops Run all at that cell. Its default path (2026-11-07; 13 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (2026-11-07; `USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `grounding_dino_detection-17`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`), and the hosted runs of earlier blobs, including `698fbaf5` and `3d248f84`, are history for it (REL14). It differs from `698fbaf5` only in the pillow 13 lock-header text and the recorded repository revision: the lock header embedded in the install cell now names pillow 13.0.0 (so `LOCK_SHA256` changed), and the carried-code revision moved from `aedc85496d21` to `177adadc34ee`. REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser `Run all`) stay open for this blob, as does every other open gate named in this file. The supplemental open-vocabulary workshop `tutorials/DIMER_Open_Vocabulary_Object_Detection_Workshop.ipynb` has a new current blob `cd8ae032` (the pillow 13 lock upgrade `2ef2195` moved its embedded lock to pillow 13.0.0, and `fe8c828` says Pillow 13.0.0 in its text); it has no hosted run yet, so that gate is open again, and the 2026-10-14 Colab CLI run of its blob `cb532ab5` (`b49d22a`) is history (REL14).
 
-The current blob `3d248f84` (code commit `d50e742`) shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); on 2026-10-29 its default path (13 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `grounding_dino_detection-17`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates are REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); earlier blobs' runs are history (REL14).
+**History (2026-10-26, final prose pass, second follow-up).** The notebook blob of `tutorials/grounding_dino_detection_colab.ipynb` at `b327d91` is `4cd2580a90f9a48aa55988b795a1db352f6dfe3a` (commit `b327d91`), regenerated from `18a2a28` on the coordinator's request: the Section 8 dispersion paragraph's 'the training itself varies by a few hundredths between runs (Section 7)' now reads 'the recorded training runs differed from each other (Section 7, **Run-to-run spread**)'. A grep of the notebook for 'hundredth', 'decimal', 'expect' and 'typically' finds no other generalisation (the remaining 'expect' hits are a Predict question to the learner, one run-labelled sentence and code identifiers). Markdown only. This exact blob (PR #14 head `361acff`) **passed** its confirming hosted run: Colab CLI sequential execution on a fresh Colab Tesla T4, 2026-10-26, 13/13 code cells in one pass, no restart, 0 errors, 1226.1 s wall; test mAP50 0.109 → 0.636, mAP75 0.052 → 0.47, epoch 6 kept, reload parity 8/8; evidence in `docs/execution-evidence/2026-10-26/`. This PR's runs cover the default path only. Remaining gates: REL12 (a hosted BYOD run with one accepted and one refused input) and REL2 (a browser Run all). Runs of earlier blobs are history (REL14). Blobs `ff3ad503` and `63fb86c1` were never run; the confirming run of `21e405bf` and the earlier records below stay as history.
+
+History (REL14): the blob `698fbaf5` (main `6f55a96`: the lock-file upgrades of PRs #16 and #17, pillow 13 among them; it was the current blob on 2026-11-03 and is history since the 2026-11-06 pillow 13 merge) passed on a hosted Colab Tesla T4 on 2026-11-02: its default path (13/13 code cells, one pass, no restart, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `grounding_dino_detection-17`, no traceback, earlier cells clean, VM released), Colab CLI sequential execution, not a browser `Run all` (REL14 for this blob). Blob `3d248f84` (code commit `d50e742`), the current blob on 2026-10-29, shows a refused BYOD input as one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results and `outputs/` files and stops Run all at that cell, while genuine failures keep their traceback (NOTEBOOK_SPEC DAT19/DAT20); on 2026-10-29 its default path (13 code cells, exit 0, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_PATH=/etc/hostname`: exactly one `Refused:` line at cell `grounding_dino_detection-17`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI `colab exec -f`, not a browser `Run all`). The remaining gates are REL12 (a hosted BYOD run with an accepted input) and REL2 (a browser run of the interactive journeys); the runs of `3d248f84` and earlier blobs are history (REL14).
 
 **Drift recorded, not fixed (2026-10-26, final prose pass; Kurt's ruling: drift is recorded here, never fixed).** The notebook prose of blob `4cd2580a` labels every run-derived number with the named recorded runs that printed it, so these differences are not prose errors. This confirming run printed these values outside the recorded values and spans the prose names. The notebook is not edited:
 
@@ -546,6 +635,8 @@ A hosted default run of the new blob is pending; its 0.05 metrics should equal t
 | Browser `Run all`, threshold sweep, BYOD (valid and refused input), export re-run | Not assessed (the CLI cannot answer upload dialogs or re-run cells) |
 
 **Evidence boundary:** Colab CLI sequential execution of the code cells in one kernel on a fresh T4; not a browser `Run all`, default path only; forms and uploads not exercised. Status stays **Candidate**.
+
+**History (REL14).** This run covers workshop blob `cb532ab5` only. The workshop's current blob `cd8ae032` (`main` `25536f8`; changed by the pillow 13 lock upgrade `2ef2195`, which moved its embedded lock to pillow 13.0.0, and by `fe8c828`, which says Pillow 13.0.0 in its text) has no hosted run yet, so its hosted-run gate is open again.
 
 ## 2026-10-04 review fixes (GDD-M1..M4, GDD-m1..m4)
 
